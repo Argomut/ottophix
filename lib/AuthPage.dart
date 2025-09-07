@@ -20,6 +20,7 @@ class _AuthPageState extends State<AuthPage> {
       final response = await supabase.auth.signUp(
         email: email,
         password: password,
+        emailRedirectTo: 'io.supabase.flutterquickstart://login-callback/'
       );
 
       setState(() {
