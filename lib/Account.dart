@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ottophix/main.dart';
 
+import 'Avatar.dart';
+
 class Account extends StatefulWidget {
   const Account({super.key});
 
@@ -11,6 +13,9 @@ class Account extends StatefulWidget {
 class _AccountState extends State<Account> {
   final _usernameCtrl = TextEditingController();
   final _websiteCtrl = TextEditingController();
+
+  String? _avatarUrl;
+
 
   @override
   void initState() {
@@ -31,16 +36,50 @@ class _AccountState extends State<Account> {
     setState(() {
       _usernameCtrl.text = data["username"];
       _websiteCtrl.text = data["website"];
+      _avatarUrl = data["avatar_url"];
     });
   }
-  
+
+  Future<void> _onUpload(String imageUrl) async {
+    try {
+      final userId = supabase.auth.currentUser!.id;
+      await supabase.from('profiles').upsert({
+        'id': userId,
+        'avatar_url': imageUrl,
+      });
+      if (mounted) {
+        const SnackBar(
+          content: Text('Updated your profile image!'),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Unexpected error occurred")));
+      }
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _avatarUrl = imageUrl;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Account"),),
+      appBar: AppBar(
+        title: const Text("Account"),
+        automaticallyImplyLeading: false,
+      ),
       body: ListView(
         padding: EdgeInsets.all(12),
         children: [
+          Avatar(
+            imageUrl: _avatarUrl,
+            onUpload: _onUpload,
+          ),
+          const SizedBox(height: 18),
           TextFormField(
             controller: _usernameCtrl,
             decoration: const InputDecoration(
