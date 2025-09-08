@@ -12,7 +12,6 @@ class Account extends StatefulWidget {
 
 class _AccountState extends State<Account> {
   final _usernameCtrl = TextEditingController();
-  final _websiteCtrl = TextEditingController();
 
   String? _avatarUrl;
 
@@ -26,26 +25,24 @@ class _AccountState extends State<Account> {
   @override
   void dispose() {
     _usernameCtrl.dispose();
-    _websiteCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _getInitialProfile() async{
     final userId = supabase.auth.currentUser!.id;
-    final data = await supabase.from('profiles').select().eq('id', userId).single();
+    final data = await supabase.from('account').select().eq('id', userId).single();
     setState(() {
       _usernameCtrl.text = data["username"];
-      _websiteCtrl.text = data["website"];
-      _avatarUrl = data["avatar_url"];
+      _avatarUrl = data["profile_picture_url"];
     });
   }
 
   Future<void> _onUpload(String imageUrl) async {
     try {
       final userId = supabase.auth.currentUser!.id;
-      await supabase.from('profiles').upsert({
+      await supabase.from('account').upsert({
         'id': userId,
-        'avatar_url': imageUrl,
+        'profile_picture_url': imageUrl,
       });
       if (mounted) {
         const SnackBar(
@@ -87,22 +84,13 @@ class _AccountState extends State<Account> {
             ),
           ),
           const SizedBox(height: 12,),
-          TextFormField(
-            controller: _websiteCtrl,
-            decoration: const InputDecoration(
-                label: Text("Website")
-            ),
-          ),
-          const SizedBox(height: 12,),
           ElevatedButton(
               onPressed: () async {
                 final username = _usernameCtrl.text.trim();
-                final website = _websiteCtrl.text.trim();
                 final userId = supabase.auth.currentUser!.id;
 
-                await supabase.from('profiles').update({
+                await supabase.from('account').update({
                   'username': username,
-                  'website': website,
                 }).eq('id', userId);
                 if(mounted){
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Account Updated")));
@@ -118,7 +106,8 @@ class _AccountState extends State<Account> {
                 await supabase.auth.signOut();
                 if(mounted){
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Logged out")));
-                  Navigator.of(context).pushReplacementNamed("/");
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
                 }
               },
               child: Text("Log out")

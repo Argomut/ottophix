@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:ottophix/Account.dart';
+import 'package:ottophix/ForgotPassword.dart';
 import 'package:ottophix/Login.dart';
+import 'package:ottophix/ResetPassword.dart';
+import 'package:ottophix/SignUp.dart';
 import 'package:ottophix/splash_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'AuthPage.dart';
@@ -23,14 +26,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Supabase Auth Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
         useMaterial3: true
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => const SplashPage(),
+        '/': (context) => const SignUpPage(),
         '/login': (context) => const LoginPage(),
+        '/signup': (context) => const SignUpPage(),
         '/account': (context) => const Account(),
+        '/forgotpassword': (context) => const ForgotPasswordPage(),
+        '/resetpassword': (context) => const ResetPasswordPage(),
       },
       // home: AuthPage(),
     );
