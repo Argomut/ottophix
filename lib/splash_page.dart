@@ -11,7 +11,6 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage> {
   @override @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _redirect();
   }
@@ -24,10 +23,10 @@ class _SplashPageState extends State<SplashPage> {
       return;
     }
     if(session != null){
-      Navigator.of(context).pushReplacementNamed("/account");
+      Navigator.of(context).pushNamed("/account");
     }
     else{
-      Navigator.of(context).pushReplacementNamed("/login");
+      Navigator.of(context).pushNamed("/login");
     }
   }
 
