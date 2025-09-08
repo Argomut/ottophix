@@ -20,7 +20,7 @@ class _LoginPageState extends State<LoginPage> {
     _authSubscription = supabase.auth.onAuthStateChange.listen((event){
       final session = event.session;
       if(session != null){
-        Navigator.of(context).pushReplacementNamed("/account");
+        Navigator.of(context).pushNamed("/account");
       }
     });
   }
@@ -35,7 +35,10 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login'),),
+      appBar: AppBar(
+        title: const Text('Login'),
+        automaticallyImplyLeading: false,
+      ),
       body: ListView(
         children: [
           TextFormField(
