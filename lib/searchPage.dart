@@ -37,11 +37,11 @@ class _SearchPageState extends State<SearchPage> {
             imagePath: row['image_path'],
           );
         }).toList();
-        filteredProducts = allProducts; // 初始显示所有
+        filteredProducts = allProducts; // display all product
         loading = false;
       });
     } catch (e) {
-      print("❌ Supabase fetch error: $e");
+      print("Supabase fetch error: $e");
       setState(() {
         loading = false;
       });
@@ -60,7 +60,7 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
-  /// 通用的图片加载
+  /// upload image
   Widget buildImage(String path) {
     if (path.startsWith('http')) {
       return Image.network(path, fit: BoxFit.cover);
@@ -90,7 +90,7 @@ class _SearchPageState extends State<SearchPage> {
       ),
       body: Column(
         children: [
-          // 🔍 搜索栏
+          // search bar
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -115,8 +115,6 @@ class _SearchPageState extends State<SearchPage> {
               ],
             ),
           ),
-
-          // 📦 商品网格
           Expanded(
             child: loading
                 ? const Center(child: CircularProgressIndicator())
