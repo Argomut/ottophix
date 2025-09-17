@@ -10,6 +10,7 @@ import 'AuthPage.dart';
 import 'searchPage.dart';
 import 'detailPage.dart';
 import 'cartPage.dart';
+import 'splash_page.dart';
 import 'models/item.dart';
 import 'package:app_links/app_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
