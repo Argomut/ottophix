@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ottophix/main.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
 
@@ -15,19 +16,27 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _passwordCtrl = TextEditingController();
   final _myFocus = FocusNode();
   final _myForm = GlobalKey<FormState>();
-  late final StreamSubscription<AuthState> _authSubscription;
 
   @override
   void initState() {
     super.initState();
+    _invalidateResetLink();
   }
 
   @override
   void dispose() {
     _passwordCtrl.dispose();
     _myFocus.dispose();
-    _authSubscription.cancel();
+    _signOutUser();
     super.dispose();
+  }
+
+  void _invalidateResetLink() async{
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('resetLinkValidation', true);
+  }
+  void _signOutUser() async{
+    await supabase.auth.signOut();
   }
 
   @override
@@ -37,6 +46,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         title: const Text('Reset Password'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),  // You can use any icon you prefer
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        )
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -112,11 +127,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       final password = _passwordCtrl.text.trim();
                       await supabase.auth.updateUser(UserAttributes(password: password));
                       if(mounted){
+                        Navigator.of(context).popUntil((route) => route.isFirst);
                         Navigator.of(context).pushReplacementNamed('/login');
+
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password Changed Successfully")));
                       }
                     }
                     catch(e){
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error occured, please try again.")));
+                      print(e);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error occured, please try again. $e")));
                     }
                   }
                 },

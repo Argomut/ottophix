@@ -1,9 +1,8 @@
-import 'dart:async';
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ottophix/main.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -19,8 +18,19 @@ class _SignUpPageState extends State<SignUpPage> {
   final _passwordCtrl = TextEditingController();
   final _myFocus = FocusNode();
   final _myForm = GlobalKey<FormState>();
-  
-  late final StreamSubscription<AuthState> _authSubscription;
+
+  // late final StreamSubscription<AuthState> _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // _authSubscription = supabase.auth.onAuthStateChange.listen((event){
+    //   final session = event.session;
+    //   if(session != null){
+    //     Navigator.of(context).pushReplacementNamed("/account");
+    //   }
+    // });
+  }
 
   @override
   void dispose() {
@@ -28,9 +38,14 @@ class _SignUpPageState extends State<SignUpPage> {
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
-    _authSubscription.cancel();
+    // _authSubscription.cancel();
     _myFocus.dispose();
+    _signOutUser();
     super.dispose();
+  }
+
+  void _signOutUser() async{
+    await supabase.auth.signOut();
   }
 
   @override
@@ -46,130 +61,130 @@ class _SignUpPageState extends State<SignUpPage> {
         child: Column(
           children: [
             const Center(
-              child: Column(
-                children: [
-                  Text(
-                    "Create Your Account",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    "Welcome to OttoPhix",
-                  ),
-                ],
-              )
+                child: Column(
+                  children: [
+                    Text(
+                      "Create Your Account",
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "Welcome to OttoPhix",
+                    ),
+                  ],
+                )
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: SingleChildScrollView(
-                child: Form(
-                  key: _myForm,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(" Username:"),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        keyboardType: TextInputType.text,
-                        inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
-                        controller: _usernameCtrl,
-                        focusNode: _myFocus,
-                        decoration: const InputDecoration(
-                          labelText: "Username",
-                          border: OutlineInputBorder(),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _myForm,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(" Username:"),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          keyboardType: TextInputType.text,
+                          inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
+                          controller: _usernameCtrl,
+                          focusNode: _myFocus,
+                          decoration: const InputDecoration(
+                            labelText: "e.g. John Doe",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please enter username";
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter username";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      const Text(" Email:"),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        keyboardType: TextInputType.emailAddress,
-                        inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
-                        controller: _emailCtrl,
-                        decoration: const InputDecoration(
-                          labelText: "Email",
-                          border: OutlineInputBorder(),
+                        const Text(" Email:"),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          keyboardType: TextInputType.emailAddress,
+                          inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
+                          controller: _emailCtrl,
+                          decoration: const InputDecoration(
+                            labelText: "e.g. johndoe@gmail.com",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please enter email";
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter email";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      const Text(" Phone No.:"),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-]')),],
-                        controller: _phoneCtrl,
-                        decoration: const InputDecoration(
-                          labelText: "Phone No.",
-                          border: OutlineInputBorder(),
+                        const Text(" Phone No.:"),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\+?[0-9]*$')),],
+                          controller: _phoneCtrl,
+                          decoration: const InputDecoration(
+                            labelText: "Phone No.",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please enter your phone number";
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter your phone number";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      const Text(" Password:"),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        obscureText: true,
-                        keyboardType: TextInputType.text,
-                        inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
-                        controller: _passwordCtrl,
-                        decoration: const InputDecoration(
-                          labelText: "Password",
-                          border: OutlineInputBorder(),
+                        const Text(" Password:"),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          obscureText: true,
+                          keyboardType: TextInputType.text,
+                          inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
+                          controller: _passwordCtrl,
+                          decoration: const InputDecoration(
+                            labelText: "Password",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please enter password";
+                            }
+                            else if(value.length < 6){
+                              return "Please enter password with at least 6 characters";
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter password";
-                          }
-                          else if(value.length < 6){
-                            return "Please enter password with at least 6 characters";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      const Text(" Confirm Password:"),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        obscureText: true,
-                        keyboardType: TextInputType.text,
-                        inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
-                        decoration: const InputDecoration(
-                          labelText: "Confirm Password",
-                          border: OutlineInputBorder(),
+                        const Text(" Confirm Password:"),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          obscureText: true,
+                          keyboardType: TextInputType.text,
+                          inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
+                          decoration: const InputDecoration(
+                            labelText: "Confirm Password",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please confirm your password";
+                            } else if (value != _passwordCtrl.text) {
+                              return "Passwords don't match";
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please confirm your password";
-                          } else if (value != _passwordCtrl.text) {
-                            return "Passwords don't match";
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              )
+                )
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -183,22 +198,23 @@ class _SignUpPageState extends State<SignUpPage> {
                       final password = _passwordCtrl.text.trim();
                       final username = _usernameCtrl.text.trim();
 
+
                       await supabase.auth.signUp(
                         email: email,
                         password: password,
                         // phone: phone,
                         data: {
-                          'username': username, // custom metadata field
+                          'username': username,
+                          'phone': phone
                         },
                         emailRedirectTo:'io.supabase.flutterquickstart://login-callback/',
                       );
                       if(mounted){
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Check your inbox")));
-                        Navigator.of(context).pushReplacementNamed('/login');
                       }
                     }
                     catch(e){
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error occured, please try again.")));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error occured, please try again. $e")));
                     }
                   }
                 },
