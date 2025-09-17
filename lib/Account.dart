@@ -80,7 +80,7 @@ class _AccountState extends State<Account> {
           TextFormField(
             controller: _usernameCtrl,
             decoration: const InputDecoration(
-              label: Text("Username")
+                label: Text("Username")
             ),
           ),
           const SizedBox(height: 12,),
@@ -106,8 +106,7 @@ class _AccountState extends State<Account> {
                 await supabase.auth.signOut();
                 if(mounted){
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Logged out")));
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pushReplacementNamed('/login');
                 }
               },
               child: Text("Log out")
