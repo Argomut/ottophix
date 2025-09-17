@@ -21,12 +21,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _authSubscription = supabase.auth.onAuthStateChange.listen((event){
-      final session = event.session;
-      if(session != null){
-        Navigator.of(context).pushNamed("/account");
-      }
-    });
+    _signOutUser();
   }
 
   @override
@@ -36,6 +31,10 @@ class _LoginPageState extends State<LoginPage> {
     _myFocus.dispose();
     _authSubscription.cancel();
     super.dispose();
+  }
+
+  void _signOutUser() async{
+    await supabase.auth.signOut();
   }
 
   @override
@@ -51,10 +50,10 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           children: [
             const Center(
-                child: Text(
-                  "Welcome Back!",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+              child: Text(
+                "Welcome Back!",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 24),
             Expanded(
@@ -108,13 +107,13 @@ class _LoginPageState extends State<LoginPage> {
                       child: GestureDetector(
                         onTap: () {
                           Navigator.of(context).pushNamed('/forgotpassword');
-                          },
-                          child: const Text(
-                            "Forgot password? ",
-                            style: TextStyle(
+                        },
+                        child: const Text(
+                          "Forgot password? ",
+                          style: TextStyle(
                               fontWeight: FontWeight.bold
-                            ),
                           ),
+                        ),
                       ),
                     ),
                   ],
@@ -177,43 +176,4 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-
-  // @override
-  // Widget build(BuildContext context) {
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       title: const Text('Login'),
-  //       automaticallyImplyLeading: false,
-  //     ),
-  //     body: ListView(
-  //       children: [
-  //         TextFormField(
-  //           controller: _emailCtrl,
-  //           decoration: InputDecoration(
-  //             label: Text("email")
-  //           ),
-  //         ),
-  //         ElevatedButton(
-  //             onPressed: () async{
-  //               try{
-  //                 final email = _emailCtrl.text.trim();
-  //                 await supabase.auth.signInWithOtp(
-  //                   email: email,
-  //                   emailRedirectTo: 'io.supabase.flutterquickstart://login-callback/',
-  //                 );
-  //                 if(mounted){
-  //                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Check your inbox")));
-  //                 }
-  //               }
-  //               catch(e){
-  //                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error occurred, please try again")));
-  //               }
-  //
-  //             },
-  //             child: const Text("Login")
-  //         )
-  //       ],
-  //     ),
-  //   );
-  // }
 }
