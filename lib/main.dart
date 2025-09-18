@@ -21,8 +21,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://ksmbdudooaanksgyuljg.supabase.co',
-    anonKey: 'sb_secret_xDmSdbqFMCC5lrdXfDwoIA_qBFmqDr6',
+    url: 'https://sxdkvlxdrzebaaqljart.supabase.co',
+    anonKey: 'sb_secret_ybsbpEyZ2lCMZxIR9qwVbA_qZsjfWyR',
   );
   runApp(MyApp());
 }
@@ -89,7 +89,7 @@ class _MyAppState extends State<MyApp>{
       initialRoute: '/',
 
       routes: {
-        '/searchPage': (context) => const SplashPage(),
+        '/': (context) => const SplashPage(),
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
         '/account': (context) => const Account(),
