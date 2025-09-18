@@ -1,14 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'models/item.dart';
 import 'cartPage.dart';
-import 'cartManager.dart';
 
 class DetailPage extends StatelessWidget {
   final Item item;
-  final CartManager cart = CartManager();
 
-  DetailPage({super.key, required this.item});
+  const DetailPage({super.key, required this.item});
 
+  /// 保存商品到本地购物车
+  Future<void> addToCart(Item item, BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final cartData = prefs.getStringList('cart') ?? [];
+
+    // 添加新商品
+    cartData.add(jsonEncode(item.toJson()));
+
+    // 保存
+    await prefs.setStringList('cart', cartData);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("${item.name} added to cart")),
+    );
+  }
+
+  /// 根据路径加载图片
   Widget buildImage(String path) {
     if (path.startsWith('http')) {
       return Image.network(path, fit: BoxFit.cover);
@@ -28,36 +45,25 @@ class DetailPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Center(
-              child: buildImage(item.imagePath),
-            ),
+            child: Center(child: buildImage(item.imagePath)),
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(item.name,
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
-                Text(
-                  "RM ${item.price.toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: Colors.green,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text("RM ${item.price.toStringAsFixed(2)}",
+                    style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600)),
                 const SizedBox(height: 20),
-                Text(
-                  item.description,
-                  style: const TextStyle(fontSize: 16),
-                ),
+                Text(item.description,
+                    style: const TextStyle(fontSize: 16)),
               ],
             ),
           ),
@@ -69,9 +75,8 @@ class DetailPage extends StatelessWidget {
               children: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.yellow,
-                    foregroundColor: Colors.black,
-                  ),
+                      backgroundColor: Colors.yellow,
+                      foregroundColor: Colors.black),
                   onPressed: () {
                     Navigator.pop(context);
                   },
@@ -79,35 +84,24 @@ class DetailPage extends StatelessWidget {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.yellow,
-                    foregroundColor: Colors.black,
-                  ),
-                  onPressed: () {
-                    cart.addItem(item);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("${item.name} added to cart"),
-                      ),
-                    );
-                  },
+                      backgroundColor: Colors.yellow,
+                      foregroundColor: Colors.black),
+                  onPressed: () => addToCart(item, context),
                   child: const Text("ADD TO CART"),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.yellow,
-                    foregroundColor: Colors.black,
-                  ),
+                      backgroundColor: Colors.yellow,
+                      foregroundColor: Colors.black),
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const CartPage()),
-                    );
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => const CartPage()));
                   },
                   child: const Text("CART"),
                 ),
               ],
             ),
-          ),
+          )
         ],
       ),
     );
