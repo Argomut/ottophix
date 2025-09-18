@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'models/item.dart';
-import 'cartManager.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -10,20 +12,42 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  final cart = CartManager();
+  List<Item> items = [];
 
-  Widget buildImage(String path) {
-    if (path.startsWith('http')) {
-      return Image.network(path, width: 50, height: 50, fit: BoxFit.cover);
-    } else {
-      return Image.asset(path, width: 50, height: 50, fit: BoxFit.cover);
-    }
+  @override
+  void initState() {
+    super.initState();
+    loadCart();
+  }
+
+  /// 从本地加载购物车
+  Future<void> loadCart() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cartData = prefs.getStringList('cart') ?? [];
+
+    setState(() {
+      items = cartData.map((e) => Item.fromJson(jsonDecode(e))).toList();
+    });
+  }
+
+  /// 从购物车删除商品
+  Future<void> removeItem(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    final cartData = prefs.getStringList('cart') ?? [];
+
+    cartData.removeAt(index);
+    await prefs.setStringList('cart', cartData);
+
+    loadCart(); // 重新加载
+  }
+
+  /// 计算总价
+  double get totalPrice {
+    return items.fold(0, (sum, item) => sum + item.price);
   }
 
   @override
   Widget build(BuildContext context) {
-    final items = cart.items;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Your Cart"),
@@ -47,21 +71,21 @@ class _CartPageState extends State<CartPage> {
                   margin: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 6),
                   child: ListTile(
-                    leading: buildImage(item.imagePath),
+                    leading: item.imagePath.startsWith('http')
+                        ? Image.network(item.imagePath,
+                        width: 50, height: 50, fit: BoxFit.cover)
+                        : Image.asset(item.imagePath,
+                        width: 50, height: 50, fit: BoxFit.cover),
                     title: Text(item.name),
-                    subtitle:
-                    Text("RM ${item.price.toStringAsFixed(2)}"),
+                    subtitle: Text("RM ${item.price.toStringAsFixed(2)}"),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () {
-                        setState(() {
-                          cart.removeItem(item);
-                        });
+                        removeItem(index);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content:
-                            Text("${item.name} removed from cart"),
-                          ),
+                              content: Text(
+                                  "${item.name} removed from cart")),
                         );
                       },
                     ),
@@ -70,6 +94,8 @@ class _CartPageState extends State<CartPage> {
               },
             ),
           ),
+
+          // 总价
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -81,13 +107,15 @@ class _CartPageState extends State<CartPage> {
                       fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  "RM ${cart.totalPrice.toStringAsFixed(2)}",
+                  "RM ${totalPrice.toStringAsFixed(2)}",
                   style: const TextStyle(
                       fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
           ),
+
+          // Checkout 按钮
           Padding(
             padding: const EdgeInsets.symmetric(
                 horizontal: 16.0, vertical: 10.0),
@@ -97,12 +125,41 @@ class _CartPageState extends State<CartPage> {
                 foregroundColor: Colors.black,
                 minimumSize: const Size.fromHeight(50),
               ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Checkout feature coming soon..."),
-                  ),
-                );
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                final cartData = prefs.getStringList('cart') ?? [];
+
+                if (cartData.isNotEmpty) {
+                  final itemsToInsert = cartData.map((e) {
+                    final item = jsonDecode(e);
+                    return {
+                      'item_name': item['name'],
+                      'price': item['price'],
+                      // 'user_id': Supabase.instance.client.auth.currentUser?.id, // 删除掉这行
+                    };
+                  }).toList();
+
+                  try {
+                    await Supabase.instance.client
+                        .from('checkout')
+                        .insert(itemsToInsert);
+
+                    // 清空本地购物车
+                    await prefs.remove('cart');
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text("Checkout complete ✅")),
+                    );
+
+                    // 刷新 UI
+                    loadCart();
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Checkout failed ❌: $e")),
+                    );
+                  }
+                }
               },
               child: const Text("CHECKOUT"),
             ),
