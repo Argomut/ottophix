@@ -6,7 +6,7 @@ import 'Login.dart';
 import 'Account.dart';
 import 'ForgotPassword.dart';
 import 'ResetPassword.dart';
-import 'AuthPage.dart';
+import 'Navigation.dart';
 import 'searchPage.dart';
 import 'detailPage.dart';
 import 'cartPage.dart';
@@ -63,12 +63,15 @@ class _MyAppState extends State<MyApp>{
 
   void _handleDeepLink(Uri link) async {
     final prefs = await SharedPreferences.getInstance();
-    bool _hasHandledDeepLink = prefs.getBool('resetLinkValidation') ?? false;
+    bool _hasHandledLoginLink = prefs.getBool('loginLinkValidation') ?? false;
+    bool _hasHandledResetLink = prefs.getBool('resetLinkValidation') ?? false;
+
+
 
     print("Received deep link: ${link.toString()}");
-    if (link.toString().contains('login-callback/')) {
+    if (link.toString().contains('login-callback/') && !_hasHandledLoginLink) {
       _navigatorKey.currentState?.pushReplacementNamed("/login");
-    } else if (link.toString().contains('reset-callback/') && !_hasHandledDeepLink) {
+    } else if (link.toString().contains('reset-callback/') && !_hasHandledResetLink) {
       _navigatorKey.currentState?.pushNamed('/resetpassword');
     }
   }
@@ -83,7 +86,7 @@ class _MyAppState extends State<MyApp>{
           useMaterial3: true
       ),
 
-      initialRoute: '/search',
+      initialRoute: '/',
 
       routes: {
         '/': (context) => const SplashPage(),
@@ -92,6 +95,7 @@ class _MyAppState extends State<MyApp>{
         '/account': (context) => const Account(),
         '/forgotpassword': (context) => const ForgotPasswordPage(),
         '/resetpassword': (context) => const ResetPasswordPage(),
+        '/navigation': (context) => const Navigation(),
         '/search': (context) => const SearchPage(),
         '/cart': (context) => const CartPage(),
       },

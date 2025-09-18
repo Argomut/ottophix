@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ottophix/main.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -33,7 +35,10 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+
   void _signOutUser() async{
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('loginLinkValidation', true);
     await supabase.auth.signOut();
   }
 
@@ -70,12 +75,13 @@ class _LoginPageState extends State<LoginPage> {
                       controller: _emailCtrl,
                       focusNode: _myFocus,
                       decoration: const InputDecoration(
-                        labelText: "Email",
+                        labelText: "e.g. johndoe@gmail.com",
+                        labelStyle: TextStyle(color: Colors.grey),
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty || value.length < 2) {
-                          return "Please enter username";
+                          return "Please enter email";
                         }
                         return null;
                       },
@@ -91,7 +97,8 @@ class _LoginPageState extends State<LoginPage> {
                       inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
                       controller: _passwordCtrl,
                       decoration: const InputDecoration(
-                        labelText: "Password",
+                        labelText: "Enter your password",
+                        labelStyle: TextStyle(color: Colors.grey),
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
@@ -134,7 +141,7 @@ class _LoginPageState extends State<LoginPage> {
                           password: password
                       );
                       if(mounted){
-                        Navigator.of(context).pushNamed('/account');
+                        Navigator.of(context).pushNamed('/navigation');
                       }
                     }
                     catch(e){
