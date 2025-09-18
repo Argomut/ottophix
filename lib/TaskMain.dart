@@ -1,14 +1,14 @@
+// TaskMain.dart
+
 import 'package:flutter/material.dart';
+import 'package:ottophix/main.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'Task.dart';
 import 'NewTaskForm.dart';
 import 'TaskDetailPage.dart';
 import 'EditTaskForm.dart';
 import 'TaskInfoPage.dart';
 
-
-void main() {
-  runApp(const MyApp());
-}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -28,14 +28,98 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
   final String title;
+
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
   List<Task> _tasks = [];
-
   String? _selectedTask;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTasks();
+  }
+
+  Future<void> _fetchTasks() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await supabase
+          .from('tasks')
+          .select()
+          .order('creation_time', ascending: false);
+
+      _tasks = data.map<Task>((e) => Task.fromSupabaseJson(e)).toList();
+      setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error fetching tasks: $e'),
+        ));
+      }
+      setState(() => _isLoading = false);
+    }
+  }
+
+
+  Future<String> _getNextTaskId() async {
+    final count = await supabase
+        .from('tasks')
+        .count();
+
+    // Add 1 to the count to get the next number
+    final nextNumber = count + 1;
+    return 'T${nextNumber.toString().padLeft(3, '0')}';
+  }
+
+  void _onAddTask() async {
+    final taskData = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const NewTaskForm(),
+      ),
+    );
+
+    if (taskData != null && taskData is Map) {
+      final newTaskId = await _getNextTaskId();
+
+      final newTask = Task(
+        id: newTaskId,
+        name: taskData['name'],
+        description: taskData['description'],
+        creationTime: DateTime.now(),
+      );
+
+      final completionData = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => TaskDetailPage(
+            taskName: newTask.name,
+            creationTime: newTask.creationTime!,
+          ),
+        ),
+      );
+
+      if (completionData != null && completionData is Map) {
+        newTask.finishTime = completionData['finishTime'];
+        newTask.totalUsedTime = completionData['totalUsedTime'];
+
+        try {
+          await supabase.from('tasks').insert(newTask.toSupabaseJson());
+          if (mounted) {
+            _fetchTasks();
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Error adding task: $e'),
+            ));
+          }
+        }
+      }
+    }
+  }
 
   void _onEditTask() async {
     if (_selectedTask != null) {
@@ -43,19 +127,24 @@ class _MyHomePageState extends State<MyHomePage> {
 
       final editedTask = await Navigator.of(context).push(
         MaterialPageRoute(
-          // Pass the full Task object to the EditTaskForm
           builder: (context) => EditTaskForm(task: taskToEdit),
         ),
       );
 
       if (editedTask != null) {
-        setState(() {
-          final index = _tasks.indexWhere((t) => t.id == editedTask.id);
-          if (index != -1) {
-            _tasks[index] = editedTask;
+        try {
+          await supabase
+              .from('tasks')
+              .update(editedTask.toSupabaseJson())
+              .eq('id', editedTask.id);
+          _fetchTasks();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Error updating task: $e'),
+            ));
           }
-        });
-        print('Edited task: ${editedTask.name}');
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,6 +156,46 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void _onDeleteTask() async {
+    if (_selectedTask != null) {
+      try {
+        await supabase
+            .from('tasks')
+            .delete()
+            .eq('id', _selectedTask!);
+
+        _fetchTasks();
+        setState(() {
+          _selectedTask = null;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Task deleted successfully.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting task: $e'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a task to delete.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   void _onViewTaskInfo() {
     if (_selectedTask != null) {
@@ -86,71 +215,16 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _onDeleteTask() {
-    // Check if a task is selected before proceeding
-    if (_selectedTask != null) {
-      final taskToDelete = _tasks.firstWhere((t) => t.id == _selectedTask);
-      setState(() {
-        _tasks.remove(taskToDelete);
-        _selectedTask = null; // Clear the selection after deletion
-      });
-      print('Deleted task: ${taskToDelete.name}');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a task to delete.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  void _onAddTask() async {
-    final taskData = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const NewTaskForm(),
-      ),
-    );
-
-    if (taskData != null && taskData is Map) {
-      // Create the initial task object with creation time
-      final newTask = Task(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: taskData['name'],
-        description: taskData['description'],
-        creationTime: DateTime.now(), // This is the Start Time
-      );
-
-      // Navigate to the TaskDetailPage and await the completion data
-      final completionData = await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => TaskDetailPage(
-            taskName: newTask.name,
-            creationTime: newTask.creationTime!,
-          ),
-        ),
-      );
-
-      // If data is returned (meaning the task was completed), update the task
-      if (completionData != null && completionData is Map) {
-        // Update the existing task with the new data
-        newTask.finishTime = completionData['finishTime'];
-        newTask.totalUsedTime = completionData['totalUsedTime'];
-
-        // Add the fully-populated task to the list
-        setState(() {
-          _tasks.add(newTask);
-        });
-
-      } else {
-        // If the user navigates back without completing, don't add the task
-        print('Task creation cancelled.');
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Job ID: ABC1234'),
@@ -197,7 +271,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
             ),
-            const SizedBox(height: 100), // Spacing below the dropdown
+            const SizedBox(height: 100),
 
             // The three icons in the center
             Row(
