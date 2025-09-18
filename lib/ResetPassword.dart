@@ -45,13 +45,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       appBar: AppBar(
         title: const Text('Reset Password'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),  // You can use any icon you prefer
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        )
+        automaticallyImplyLeading: true,
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -79,7 +73,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
                       controller: _passwordCtrl,
                       decoration: const InputDecoration(
-                        labelText: "Password",
+                        labelText: "Include at least 6 characters",
+                        labelStyle: TextStyle(color: Colors.grey),
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
@@ -101,7 +96,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       keyboardType: TextInputType.text,
                       inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
                       decoration: const InputDecoration(
-                        labelText: "Confirm Password",
+                        labelText: "Confirm your password",
+                        labelStyle: TextStyle(color: Colors.grey),
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {

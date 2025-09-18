@@ -23,7 +23,7 @@ class _SplashPageState extends State<SplashPage> {
       return;
     }
     if(session != null){
-      Navigator.of(context).pushNamed("/account");
+      Navigator.of(context).pushNamed("/navigation");
     }
     else{
       Navigator.of(context).pushNamed("/login");

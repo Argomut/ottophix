@@ -28,18 +28,34 @@ class _AvatarState extends State<Avatar> {
           Container(
             width: 150,
             height: 150,
-            color: Colors.grey,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.orange,
+                width: 3
+              ),
+              borderRadius: BorderRadius.circular(10)
+            ),
             child: const Center(
               child: Text('No Image'),
             ),
           )
         else
-          Image.network(
-            widget.imageUrl!,
+          Container(
             width: 150,
             height: 150,
-            fit: BoxFit.cover,
+            decoration: BoxDecoration(
+                border: Border.all(
+                    color: Colors.orange,
+                    width: 3
+                ),
+                borderRadius: BorderRadius.circular(10)
+            ),
+            child: Image.network(
+              widget.imageUrl!,
+              fit: BoxFit.cover,
+            ),
           ),
+        const SizedBox(height: 12,),
         ElevatedButton(
           onPressed: _isLoading ? null : _upload,
           child: const Text('Upload'),

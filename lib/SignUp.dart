@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ottophix/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -90,6 +91,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           focusNode: _myFocus,
                           decoration: const InputDecoration(
                             labelText: "e.g. John Doe",
+                            labelStyle: TextStyle(color: Colors.grey),
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
@@ -109,6 +111,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           controller: _emailCtrl,
                           decoration: const InputDecoration(
                             labelText: "e.g. johndoe@gmail.com",
+                            labelStyle: TextStyle(color: Colors.grey),
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
@@ -124,10 +127,11 @@ class _SignUpPageState extends State<SignUpPage> {
                         const SizedBox(height: 6),
                         TextFormField(
                           keyboardType: TextInputType.phone,
-                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\+?[0-9]*$')),],
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\+?[0-9 ]*$')),],
                           controller: _phoneCtrl,
                           decoration: const InputDecoration(
-                            labelText: "Phone No.",
+                            labelText: "e.g +60 12 345 6789",
+                            labelStyle: TextStyle(color: Colors.grey),
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
@@ -147,7 +151,8 @@ class _SignUpPageState extends State<SignUpPage> {
                           inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
                           controller: _passwordCtrl,
                           decoration: const InputDecoration(
-                            labelText: "Password",
+                            labelText: "Include at least 6 characters",
+                            labelStyle: TextStyle(color: Colors.grey),
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
@@ -169,7 +174,8 @@ class _SignUpPageState extends State<SignUpPage> {
                           keyboardType: TextInputType.text,
                           inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
                           decoration: const InputDecoration(
-                            labelText: "Confirm Password",
+                            labelText: "Confirm your password",
+                            labelStyle: TextStyle(color: Colors.grey),
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
@@ -199,6 +205,8 @@ class _SignUpPageState extends State<SignUpPage> {
                       final username = _usernameCtrl.text.trim();
 
 
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('loginLinkValidation', false);
                       await supabase.auth.signUp(
                         email: email,
                         password: password,

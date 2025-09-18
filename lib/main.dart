@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:ottophix/Account.dart';
-import 'package:ottophix/ForgotPassword.dart';
-import 'package:ottophix/Login.dart';
-import 'package:ottophix/ResetPassword.dart';
-import 'package:ottophix/SignUp.dart';
-import 'package:ottophix/splash_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'SignUp.dart';
+import 'Login.dart';
+import 'Account.dart';
+import 'ForgotPassword.dart';
+import 'ResetPassword.dart';
+import 'Navigation.dart';
+import 'searchPage.dart';
+import 'detailPage.dart';
+import 'cartPage.dart';
+import 'splash_page.dart';
+import 'models/item.dart';
 import 'package:app_links/app_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:uni_links/uni_links.dart';
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://sxdkvlxdrzebaaqljart.supabase.co',      // Replace with your Supabase URL
-    anonKey: 'sb_secret_ybsbpEyZ2lCMZxIR9qwVbA_qZsjfWyR',                     // Replace with your public anon key
+    url: 'https://sxdkvlxdrzebaaqljart.supabase.co',
+    anonKey: 'sb_secret_ybsbpEyZ2lCMZxIR9qwVbA_qZsjfWyR',
   );
   runApp(MyApp());
 }
@@ -56,12 +63,15 @@ class _MyAppState extends State<MyApp>{
 
   void _handleDeepLink(Uri link) async {
     final prefs = await SharedPreferences.getInstance();
-    bool _hasHandledDeepLink = prefs.getBool('resetLinkValidation') ?? false;
+    bool _hasHandledLoginLink = prefs.getBool('loginLinkValidation') ?? false;
+    bool _hasHandledResetLink = prefs.getBool('resetLinkValidation') ?? false;
+
+
 
     print("Received deep link: ${link.toString()}");
-    if (link.toString().contains('login-callback/')) {
+    if (link.toString().contains('login-callback/') && !_hasHandledLoginLink) {
       _navigatorKey.currentState?.pushReplacementNamed("/login");
-    } else if (link.toString().contains('reset-callback/') && !_hasHandledDeepLink) {
+    } else if (link.toString().contains('reset-callback/') && !_hasHandledResetLink) {
       _navigatorKey.currentState?.pushNamed('/resetpassword');
     }
   }
@@ -75,7 +85,9 @@ class _MyAppState extends State<MyApp>{
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
           useMaterial3: true
       ),
+
       initialRoute: '/',
+
       routes: {
         '/': (context) => const SplashPage(),
         '/login': (context) => const LoginPage(),
@@ -83,6 +95,9 @@ class _MyAppState extends State<MyApp>{
         '/account': (context) => const Account(),
         '/forgotpassword': (context) => const ForgotPasswordPage(),
         '/resetpassword': (context) => const ResetPasswordPage(),
+        '/navigation': (context) => const Navigation(),
+        '/search': (context) => const SearchPage(),
+        '/cart': (context) => const CartPage(),
       },
     );
   }

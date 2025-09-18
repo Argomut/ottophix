@@ -67,7 +67,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       controller: _emailCtrl,
                       focusNode: _myFocus,
                       decoration: const InputDecoration(
-                        labelText: "Email",
+                        labelText: "e.g. johndoe@gmail.com",
+                        labelStyle: TextStyle(color: Colors.grey),
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
