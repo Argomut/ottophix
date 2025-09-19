@@ -10,33 +10,19 @@ import 'EditTaskForm.dart';
 import 'TaskInfoPage.dart';
 
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class TaskMain extends StatefulWidget {
+  const TaskMain({super.key, required this.title});
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<TaskMain> createState() => _TaskMainState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _TaskMainState extends State<TaskMain> {
   List<Task> _tasks = [];
   String? _selectedTask;
   bool _isLoading = true;
+  bool _isFabOpen = false;
 
   @override
   void initState() {
@@ -215,6 +201,47 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12.0),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.3),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: Icon(icon, color: Colors.white),
+            onPressed: onPressed,
+            iconSize: 24,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -236,79 +263,243 @@ class _MyHomePageState extends State<MyHomePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.person),
-            onPressed: () {},
+            onPressed: () async {
+              await supabase.auth.signOut();
+              if (mounted) {
+                Navigator.of(context).pushReplacementNamed('/login');
+              }
+            },
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Dropdown button header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const Text('Task'),
-                  value: _selectedTask,
-                  items: _tasks.map((Task task) {
-                    return DropdownMenuItem<String>(
-                      value: task.id,
-                      child: Text(task.name),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedTask = newValue;
-                    });
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 100),
-
-            // The three icons in the center
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit, size: 48),
-                  onPressed: _onEditTask,
-                ),
-                const SizedBox(width: 40),
-                IconButton(
-                  icon: const Icon(Icons.delete, size: 48),
-                  onPressed: _onDeleteTask,
+      body: Column(
+        children: [
+          // Task Selection Section
+          Container(
+            margin: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 1,
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
                 ),
               ],
             ),
-            const SizedBox(height: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select Task',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      hint: const Text('Choose a task to manage'),
+                      value: _selectedTask,
+                      items: _tasks.map((Task task) {
+                        return DropdownMenuItem<String>(
+                          value: task.id,
+                          child: Text(
+                            task.name,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedTask = newValue;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-            // View Task Info button
-            ElevatedButton.icon(
-              onPressed: _onViewTaskInfo,
-              icon: const Icon(Icons.info_outline),
-              label: const Text('View Task Info'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFC9C0E2),
-                foregroundColor: Colors.white,
+          // Task Actions Section (only show if task is selected)
+          if (_selectedTask != null) ...[
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12.0),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Task Actions',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildActionButton(
+                        icon: Icons.info_outline,
+                        label: 'View Info',
+                        color: Colors.blue,
+                        onPressed: _onViewTaskInfo,
+                      ),
+                      _buildActionButton(
+                        icon: Icons.edit,
+                        label: 'Edit',
+                        color: Colors.orange,
+                        onPressed: _onEditTask,
+                      ),
+                      _buildActionButton(
+                        icon: Icons.delete,
+                        label: 'Delete',
+                        color: Colors.red,
+                        onPressed: _onDeleteTask,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            // The add icon
-            IconButton(
-              icon: const Icon(Icons.add_circle, size: 64),
-              onPressed: _onAddTask,
-            ),
           ],
-        ),
+
+          // Empty state when no tasks
+          if (_tasks.isEmpty && !_isLoading) ...[
+            const Spacer(),
+            const Icon(
+              Icons.task_alt,
+              size: 80,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No tasks yet',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Tap the + button to create your first task',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const Spacer(),
+          ],
+
+          // Spacer to push content up
+          if (_tasks.isNotEmpty) const Spacer(),
+        ],
+      ),
+
+      // Floating Action Button with Speed Dial
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Speed Dial Options
+          if (_isFabOpen) ...[
+            // Add Task FAB
+            FloatingActionButton(
+              heroTag: "add_task",
+              mini: true,
+              backgroundColor: Colors.green,
+              onPressed: () {
+                setState(() => _isFabOpen = false);
+                _onAddTask();
+              },
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
+            const SizedBox(height: 10),
+            
+            // View Task Info FAB (only if task selected)
+            if (_selectedTask != null) ...[
+              FloatingActionButton(
+                heroTag: "view_info",
+                mini: true,
+                backgroundColor: Colors.blue,
+                onPressed: () {
+                  setState(() => _isFabOpen = false);
+                  _onViewTaskInfo();
+                },
+                child: const Icon(Icons.info_outline, color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+            ],
+            
+            // Edit Task FAB (only if task selected)
+            if (_selectedTask != null) ...[
+              FloatingActionButton(
+                heroTag: "edit_task",
+                mini: true,
+                backgroundColor: Colors.orange,
+                onPressed: () {
+                  setState(() => _isFabOpen = false);
+                  _onEditTask();
+                },
+                child: const Icon(Icons.edit, color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+            ],
+            
+            // Delete Task FAB (only if task selected)
+            if (_selectedTask != null) ...[
+              FloatingActionButton(
+                heroTag: "delete_task",
+                mini: true,
+                backgroundColor: Colors.red,
+                onPressed: () {
+                  setState(() => _isFabOpen = false);
+                  _onDeleteTask();
+                },
+                child: const Icon(Icons.delete, color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ],
+          
+          // Main FAB
+          FloatingActionButton(
+            heroTag: "main_fab",
+            onPressed: () {
+              setState(() {
+                _isFabOpen = !_isFabOpen;
+              });
+            },
+            child: AnimatedRotation(
+              turns: _isFabOpen ? 0.125 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                _isFabOpen ? Icons.close : Icons.menu,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

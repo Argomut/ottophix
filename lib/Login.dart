@@ -134,7 +134,7 @@ class _LoginPageState extends State<LoginPage> {
                           password: password
                       );
                       if(mounted){
-                        Navigator.of(context).pushNamed('/account');
+                        Navigator.of(context).pushNamed('/tasks');
                       }
                     }
                     catch(e){

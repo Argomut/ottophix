@@ -5,6 +5,7 @@ import 'package:ottophix/Login.dart';
 import 'package:ottophix/ResetPassword.dart';
 import 'package:ottophix/SignUp.dart';
 import 'package:ottophix/splash_page.dart';
+import 'package:ottophix/TaskMain.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_links/app_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,8 +15,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://sxdkvlxdrzebaaqljart.supabase.co',      // Replace with your Supabase URL
-    anonKey: 'sb_secret_ybsbpEyZ2lCMZxIR9qwVbA_qZsjfWyR',                     // Replace with your public anon key
+    url: 'https://uldfsedlhouyilbofeqv.supabase.co',      // Replace with your Supabase URL
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZGZzZWRsaG91eWlsYm9mZXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMjQwMjksImV4cCI6MjA3MzgwMDAyOX0.8mIxMnkzh2rZu0r9e-M-TvuEZihVVJ2tHA83TNhGN0o',                     // Replace with your public anon key
   );
   runApp(MyApp());
 }
@@ -60,7 +61,7 @@ class _MyAppState extends State<MyApp>{
 
     print("Received deep link: ${link.toString()}");
     if (link.toString().contains('login-callback/')) {
-      _navigatorKey.currentState?.pushReplacementNamed("/login");
+      _navigatorKey.currentState?.pushReplacementNamed("/tasks");
     } else if (link.toString().contains('reset-callback/') && !_hasHandledDeepLink) {
       _navigatorKey.currentState?.pushNamed('/resetpassword');
     }
@@ -77,7 +78,7 @@ class _MyAppState extends State<MyApp>{
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => const SplashPage(),
+        '/': (context) => const TaskMain(title: 'Task Management'),
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
         '/account': (context) => const Account(),
