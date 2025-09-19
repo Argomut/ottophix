@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ottophix/stockaPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'SignUp.dart';
@@ -7,6 +8,7 @@ import 'Account.dart';
 import 'ForgotPassword.dart';
 import 'ResetPassword.dart';
 import 'AuthPage.dart';
+import 'inventoryLogPage.dart';
 import 'searchPage.dart';
 import 'detailPage.dart';
 import 'cartPage.dart';
@@ -14,7 +16,7 @@ import 'splash_page.dart';
 import 'models/item.dart';
 import 'package:app_links/app_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'TaskPage.dart';
+
 
 
 
@@ -95,7 +97,8 @@ class _MyAppState extends State<MyApp>{
         '/resetpassword': (context) => const ResetPasswordPage(),
         '/search': (context) => const SearchPage(),
         '/cart': (context) => const CartPage(),
-        '/tasks': (context) => const TaskPage(),
+        '/stock': (context) => const StockPage(),
+        '/logs': (context) => const InventoryLogPage(),
       },
     );
   }

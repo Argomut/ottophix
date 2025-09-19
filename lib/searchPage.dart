@@ -87,9 +87,9 @@ class _SearchPageState extends State<SearchPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.task),
+            icon: const Icon(Icons.inventory),
             onPressed: () {
-              Navigator.pushNamed(context, '/tasks');
+              Navigator.pushNamed(context, '/stock'); // 跳转 StockPage
             },
           ),
         ],
