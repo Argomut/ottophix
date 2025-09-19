@@ -86,6 +86,12 @@ class _SearchPageState extends State<SearchPage> {
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.task),
+            onPressed: () {
+              Navigator.pushNamed(context, '/tasks');
+            },
+          ),
         ],
       ),
       body: Column(

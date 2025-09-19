@@ -9,15 +9,15 @@ class DetailPage extends StatelessWidget {
 
   const DetailPage({super.key, required this.item});
 
-  /// 保存商品到本地购物车
+  /// save to local database
   Future<void> addToCart(Item item, BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     final cartData = prefs.getStringList('cart') ?? [];
 
-    // 添加新商品
+    // add to cart
     cartData.add(jsonEncode(item.toJson()));
 
-    // 保存
+    // save
     await prefs.setStringList('cart', cartData);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -25,7 +25,7 @@ class DetailPage extends StatelessWidget {
     );
   }
 
-  /// 根据路径加载图片
+  /// load image from path
   Widget buildImage(String path) {
     if (path.startsWith('http')) {
       return Image.network(path, fit: BoxFit.cover);

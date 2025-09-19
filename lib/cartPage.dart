@@ -20,7 +20,7 @@ class _CartPageState extends State<CartPage> {
     loadCart();
   }
 
-  /// 从本地加载购物车
+  /// load local cart
   Future<void> loadCart() async {
     final prefs = await SharedPreferences.getInstance();
     final cartData = prefs.getStringList('cart') ?? [];
@@ -30,7 +30,7 @@ class _CartPageState extends State<CartPage> {
     });
   }
 
-  /// 从购物车删除商品
+  /// delete item from cart
   Future<void> removeItem(int index) async {
     final prefs = await SharedPreferences.getInstance();
     final cartData = prefs.getStringList('cart') ?? [];
@@ -38,10 +38,10 @@ class _CartPageState extends State<CartPage> {
     cartData.removeAt(index);
     await prefs.setStringList('cart', cartData);
 
-    loadCart(); // 重新加载
+    loadCart(); // reload
   }
 
-  /// 计算总价
+  /// calculate price
   double get totalPrice {
     return items.fold(0, (sum, item) => sum + item.price);
   }
@@ -95,7 +95,7 @@ class _CartPageState extends State<CartPage> {
             ),
           ),
 
-          // 总价
+          // total price
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -115,7 +115,7 @@ class _CartPageState extends State<CartPage> {
             ),
           ),
 
-          // Checkout 按钮
+          // Checkout
           Padding(
             padding: const EdgeInsets.symmetric(
                 horizontal: 16.0, vertical: 10.0),
@@ -135,7 +135,6 @@ class _CartPageState extends State<CartPage> {
                     return {
                       'item_name': item['name'],
                       'price': item['price'],
-                      // 'user_id': Supabase.instance.client.auth.currentUser?.id, // 删除掉这行
                     };
                   }).toList();
 
@@ -144,7 +143,7 @@ class _CartPageState extends State<CartPage> {
                         .from('checkout')
                         .insert(itemsToInsert);
 
-                    // 清空本地购物车
+                    // empty cart
                     await prefs.remove('cart');
 
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -152,7 +151,7 @@ class _CartPageState extends State<CartPage> {
                           content: Text("Checkout complete ✅")),
                     );
 
-                    // 刷新 UI
+                    // reload ui
                     loadCart();
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(

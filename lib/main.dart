@@ -14,6 +14,7 @@ import 'splash_page.dart';
 import 'models/item.dart';
 import 'package:app_links/app_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'TaskPage.dart';
 
 
 
@@ -94,6 +95,7 @@ class _MyAppState extends State<MyApp>{
         '/resetpassword': (context) => const ResetPasswordPage(),
         '/search': (context) => const SearchPage(),
         '/cart': (context) => const CartPage(),
+        '/tasks': (context) => const TaskPage(),
       },
     );
   }
