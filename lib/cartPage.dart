@@ -77,7 +77,8 @@ class _CartPageState extends State<CartPage> {
                         : Image.asset(item.imagePath,
                         width: 50, height: 50, fit: BoxFit.cover),
                     title: Text(item.name),
-                    subtitle: Text("RM ${item.price.toStringAsFixed(2)}"),
+                    subtitle:
+                    Text("RM ${item.price.toStringAsFixed(2)}"),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () {
@@ -130,32 +131,51 @@ class _CartPageState extends State<CartPage> {
                 final cartData = prefs.getStringList('cart') ?? [];
 
                 if (cartData.isNotEmpty) {
-                  final itemsToInsert = cartData.map((e) {
-                    final item = jsonDecode(e);
-                    return {
-                      'item_name': item['name'],
-                      'price': item['price'],
-                    };
-                  }).toList();
-
                   try {
-                    await Supabase.instance.client
-                        .from('checkout')
-                        .insert(itemsToInsert);
+                    for (var itemJson in cartData) {
+                      final item = jsonDecode(itemJson);
+
+                      // save checkout record
+                      await Supabase.instance.client
+                          .from('checkout')
+                          .insert({
+                        'item_name': item['name'],
+                        'price': item['price'],
+                      });
+
+                      // find stock_id
+                      final stockRes = await Supabase.instance.client
+                          .from('stock')
+                          .select('stock_id')
+                          .eq('item_id', item['id'])
+                          .single();
+
+                      final stockId = stockRes['stock_id'];
+
+                      // apply adjust_stock (-1, stock_id, 'checkout')
+                      await Supabase.instance.client.rpc(
+                        'adjust_stock',
+                        params: {
+                          'p_change': -1,
+                          'p_stock_id': stockId,
+                          'p_action': 'checkout',
+                        },
+                      );
+                    }
 
                     // empty cart
                     await prefs.remove('cart');
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text("Checkout complete ✅")),
+                          content: Text("Checkout complete ")),
                     );
 
-                    // reload ui
+                    // refresh UI
                     loadCart();
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Checkout failed ❌: $e")),
+                      SnackBar(content: Text("Checkout failed : $e")),
                     );
                   }
                 }
