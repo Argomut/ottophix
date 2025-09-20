@@ -35,13 +35,25 @@ class _TaskSummaryPageState extends State<TaskSummaryPage> {
   }
 
   Future<String> _getNextTaskId() async {
-    final count = await supabase
+    // Query for the highest existing ID in the 'tasks' table
+    final result = await supabase
         .from('tasks')
-        .count();
+        .select('id')
+        .order('id', ascending: false) // Order by ID in descending order
+        .limit(1); // Get only the first (highest) one
 
-    // Add 1 to the count to get the next number
-    final nextNumber = count + 1;
-    return 'T${nextNumber.toString().padLeft(3, '0')}';
+    // If there are no tasks yet, start with T001
+    if (result.isEmpty) {
+      return 'T001';
+    }
+
+    // Extract the highest ID
+    final highestId = result[0]['id'] as String;
+    final idNumber = int.parse(highestId.substring(1)); // Convert "T001" to 1
+    final nextIdNumber = idNumber + 1;
+
+    // Format the new ID back into the "T00X" format
+    return 'T${nextIdNumber.toString().padLeft(3, '0')}';
   }
 
   Future<void> _onFinalComplete() async {

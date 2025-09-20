@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'Task.dart';
+import 'searchPage.dart'; // Import searchPage.dart
+import 'models/item.dart'; // Import models/item.dart
 
 void main() {
   runApp(MaterialApp(
@@ -16,7 +18,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       home: const NewTaskForm(title: 'Flutter Demo Home Page'),
@@ -36,7 +37,6 @@ class _NewTaskFormState extends State<NewTaskForm> {
   final TextEditingController _taskNameController = TextEditingController();
   final TextEditingController _taskDescriptionController = TextEditingController();
 
-
   void _createTask() {
     final String taskName = _taskNameController.text;
     final String taskDescription = _taskDescriptionController.text;
@@ -48,11 +48,13 @@ class _NewTaskFormState extends State<NewTaskForm> {
     Navigator.of(context).pop({'name': taskName, 'description': taskDescription});
   }
 
-  void _uploadImage() {
-    // This function will handle the image upload logic.
-    // You can use a package like `image_picker` for this.
-    print('Upload image button pressed');
-    // Implement image picker logic here.
+  // New function to handle the button press and navigate to SearchPage
+  void _addPart() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SearchPage(isFromTaskDetail: true),
+      ),
+    );
   }
 
   @override
@@ -123,7 +125,7 @@ class _NewTaskFormState extends State<NewTaskForm> {
             ),
             SizedBox(height: 8),
             GestureDetector(
-              onTap: _uploadImage,
+              onTap: _addPart, // Change this to call the new _addPart function
               child: Container(
                 height: 50,
                 width: double.infinity,
@@ -159,5 +161,3 @@ class _NewTaskFormState extends State<NewTaskForm> {
     );
   }
 }
-
-
