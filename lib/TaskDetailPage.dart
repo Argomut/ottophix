@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'TaskSummaryPage.dart';
 import 'searchPage.dart';
 import 'models/item.dart';
+import 'cartPage.dart';
 
 // Part model that works with Item
 class Part {
@@ -76,6 +77,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
   void initState() {
     super.initState();
     _startTimer();
+    _loadTaskParts();
   }
 
   @override
@@ -95,6 +97,30 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     });
   }
 
+  /// Load task parts from SharedPreferences
+  Future<void> _loadTaskParts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final taskPartsData = prefs.getStringList('task_parts_${widget.taskName}') ?? [];
+      
+      setState(() {
+        _assignedParts.clear();
+        for (final itemJson in taskPartsData) {
+          final item = Item.fromJson(jsonDecode(itemJson));
+          // Check if this part already exists, if so increment quantity
+          final existingPartIndex = _assignedParts.indexWhere((part) => part.name == item.name);
+          if (existingPartIndex != -1) {
+            _assignedParts[existingPartIndex].quantity++;
+          } else {
+            _assignedParts.add(Part.fromItem(item, 1));
+          }
+        }
+      });
+    } catch (e) {
+      print('Error loading task parts: $e');
+    }
+  }
+
   void _toggleTimer() {
     setState(() {
       _isPaused = !_isPaused;
@@ -108,156 +134,26 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
-  void _addPartToCart(Part part) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final cartData = prefs.getStringList('cart') ?? [];
-
-      // Add the part multiple times based on quantity
-      for (int i = 0; i < part.quantity; i++) {
-        cartData.add(jsonEncode(part.toItem().toJson()));
-      }
-
-      await prefs.setStringList('cart', cartData);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${part.name} (x${part.quantity}) added to cart'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding to cart: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _addAllToCart() async {
-    if (_assignedParts.isEmpty) return;
-
-    try {
-      // Import SharedPreferences and json
-      final prefs = await SharedPreferences.getInstance();
-      final cartData = prefs.getStringList('cart') ?? [];
-
-      int addedCount = 0;
-      for (final part in _assignedParts) {
-        // Add each part multiple times based on quantity
-        for (int i = 0; i < part.quantity; i++) {
-          cartData.add(jsonEncode(part.toItem().toJson()));
-          addedCount++;
-        }
-      }
-
-      await prefs.setStringList('cart', cartData);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$addedCount items added to cart'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding to cart: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
   void _addPart() async {
     // Navigate to SearchPage to select parts
     final selectedItem = await Navigator.of(context).push<Item>(
       MaterialPageRoute(
-        builder: (context) => const SearchPage(),
+        builder: (context) => const SearchPage(isFromTaskDetail: true),
       ),
     );
 
     if (selectedItem != null) {
-      // Show quantity dialog
-      final quantity = await _showQuantityDialog(selectedItem);
-      if (quantity != null && quantity > 0) {
-        setState(() {
-          _assignedParts.add(Part.fromItem(selectedItem, quantity));
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${selectedItem.name} (x$quantity) added to parts list'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+      // Item was added to cart through DetailPage, show confirmation message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${selectedItem.name} added to cart. Complete checkout to add to assigned parts.'),
+          backgroundColor: Colors.blue,
+        ),
+      );
     }
   }
 
-  Future<int?> _showQuantityDialog(Item item) async {
-    int quantity = 1;
-    
-    return await showDialog<int>(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Add ${item.name}'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Price: RM ${item.price.toStringAsFixed(2)}'),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          if (quantity > 1) {
-                            setState(() => quantity--);
-                          }
-                        },
-                        icon: const Icon(Icons.remove),
-                      ),
-                      Text(
-                        quantity.toString(),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          setState(() => quantity++);
-                        },
-                        icon: const Icon(Icons.add),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Total: RM ${(item.price * quantity).toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(quantity),
-                  child: const Text('Add'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   void _onComplete() {
     final finishTime = DateTime.now();
@@ -299,6 +195,19 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           onPressed: () {},
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.shopping_cart),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CartPage(taskId: widget.taskName),
+                ),
+              );
+              // Refresh assigned parts after returning from cart
+              _loadTaskParts();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {},
@@ -374,23 +283,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             const SizedBox(height: 24),
 
             // Assigned Parts List
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Assign Parts', style: Theme.of(context).textTheme.titleLarge),
-                if (_assignedParts.isNotEmpty)
-                  ElevatedButton.icon(
-                    onPressed: _addAllToCart,
-                    icon: const Icon(Icons.shopping_cart, size: 16),
-                    label: const Text('Add All to Cart'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-              ],
-            ),
+            Text('Assigned Parts', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
@@ -493,26 +386,10 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
               'Qty: ${part.quantity}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(width: 4),
-            IconButton(
-              icon: const Icon(Icons.shopping_cart, color: Colors.green),
-              onPressed: () => _addPartToCart(part),
-              tooltip: 'Add to Cart',
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                setState(() {
-                  _assignedParts.remove(part);
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${part.name} removed from parts list'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              },
-              tooltip: 'Remove',
+            const SizedBox(width: 8),
+            Text(
+              'RM ${((part.price ?? 0) * part.quantity).toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
             ),
           ],
         ),

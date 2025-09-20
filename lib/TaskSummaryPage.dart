@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:ottophix/main.dart';
 import 'package:ottophix/Task.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class TaskSummaryPage extends StatefulWidget {
   final String taskName;
@@ -53,10 +55,14 @@ class _TaskSummaryPageState extends State<TaskSummaryPage> {
         creationTime: widget.creationTime,
         finishTime: widget.finishTime,
         totalUsedTime: widget.totalUsedTime,
-        assignedParts: widget.assignedParts,
+        assignedParts: null, // We'll handle parts separately
       );
 
+      // Save the task to database
       await supabase.from('tasks').insert(newTask.toSupabaseJson());
+      
+      // Task parts are now handled through the cart system
+      // No need to save them separately here
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

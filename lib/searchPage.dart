@@ -5,7 +5,9 @@ import 'cartPage.dart';
 import 'models/item.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  final bool isFromTaskDetail;
+  
+  const SearchPage({super.key, this.isFromTaskDetail = false});
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -62,12 +64,7 @@ class _SearchPageState extends State<SearchPage> {
 
   /// upload image
   Widget buildImage(String path) {
-    if (path.isEmpty) {
-      return Container(
-        color: Colors.grey[300],
-        child: const Icon(Icons.image_not_supported, size: 50),
-      );
-    } else if (path.startsWith('http')) {
+    if (path.startsWith('http')) {
       return Image.network(path, fit: BoxFit.cover);
     } else {
       return Image.asset(path, fit: BoxFit.cover);
@@ -142,12 +139,20 @@ class _SearchPageState extends State<SearchPage> {
               itemBuilder: (context, index) {
                 final item = filteredProducts[index];
                 return GestureDetector(
-                  onTap: () {
-                    // If this page was opened from TaskDetailPage, return the item
-                    if (Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop(item);
+                  onTap: () async {
+                    if (widget.isFromTaskDetail) {
+                      // If coming from TaskDetailPage, navigate to DetailPage and return the selected item
+                      final selectedItem = await Navigator.push<Item>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailPage(item: item, isFromTaskDetail: true),
+                        ),
+                      );
+                      if (selectedItem != null) {
+                        Navigator.of(context).pop(selectedItem);
+                      }
                     } else {
-                      // Otherwise, navigate to detail page
+                      // Normal flow: navigate to DetailPage
                       Navigator.push(
                         context,
                         MaterialPageRoute(

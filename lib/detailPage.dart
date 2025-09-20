@@ -6,33 +6,120 @@ import 'cartPage.dart';
 
 class DetailPage extends StatelessWidget {
   final Item item;
+  final bool isFromTaskDetail;
 
-  const DetailPage({super.key, required this.item});
+  const DetailPage({super.key, required this.item, this.isFromTaskDetail = false});
 
   /// save to local database
-  Future<void> addToCart(Item item, BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    final cartData = prefs.getStringList('cart') ?? [];
+  Future<Item?> addToCart(Item item, BuildContext context) async {
+    if (isFromTaskDetail) {
+      // If called from TaskDetailPage, show quantity dialog first
+      final quantity = await _showQuantityDialog(item, context);
+      if (quantity == null || quantity <= 0) {
+        return null;
+      }
+      
+      final prefs = await SharedPreferences.getInstance();
+      final cartData = prefs.getStringList('cart') ?? [];
 
-    // add to cart
-    cartData.add(jsonEncode(item.toJson()));
+      // Add the item multiple times based on quantity
+      for (int i = 0; i < quantity; i++) {
+        cartData.add(jsonEncode(item.toJson()));
+      }
 
-    // save
-    await prefs.setStringList('cart', cartData);
+      // save
+      await prefs.setStringList('cart', cartData);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("${item.name} added to cart")),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("${item.name} (x$quantity) added to cart")),
+      );
+
+      return item;
+    } else {
+      // Normal flow: add single item to cart
+      final prefs = await SharedPreferences.getInstance();
+      final cartData = prefs.getStringList('cart') ?? [];
+
+      // add to cart
+      cartData.add(jsonEncode(item.toJson()));
+
+      // save
+      await prefs.setStringList('cart', cartData);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("${item.name} added to cart")),
+      );
+
+      return null;
+    }
+  }
+
+  /// Show quantity selection dialog
+  Future<int?> _showQuantityDialog(Item item, BuildContext context) async {
+    int quantity = 1;
+    
+    return await showDialog<int>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Add ${item.name}'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Price: RM ${item.price.toStringAsFixed(2)}'),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (quantity > 1) {
+                            setState(() => quantity--);
+                          }
+                        },
+                        icon: const Icon(Icons.remove),
+                      ),
+                      Text(
+                        quantity.toString(),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          setState(() => quantity++);
+                        },
+                        icon: const Icon(Icons.add),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Total: RM ${(item.price * quantity).toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(quantity),
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   /// load image from path
   Widget buildImage(String path) {
-    if (path.isEmpty) {
-      return Container(
-        color: Colors.grey[300],
-        child: const Icon(Icons.image_not_supported, size: 50),
-      );
-    } else if (path.startsWith('http')) {
+    if (path.startsWith('http')) {
       return Image.network(path, fit: BoxFit.cover);
     } else {
       return Image.asset(path, fit: BoxFit.cover);
@@ -67,7 +154,7 @@ class DetailPage extends StatelessWidget {
                         color: Colors.green,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 20),
-                Text(item.description ?? 'No description available',
+                Text(item.description ?? '',
                     style: const TextStyle(fontSize: 16)),
               ],
             ),
@@ -91,7 +178,12 @@ class DetailPage extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.yellow,
                       foregroundColor: Colors.black),
-                  onPressed: () => addToCart(item, context),
+                  onPressed: () async {
+                    final result = await addToCart(item, context);
+                    if (isFromTaskDetail && result != null) {
+                      Navigator.of(context).pop(result);
+                    }
+                  },
                   child: const Text("ADD TO CART"),
                 ),
                 ElevatedButton(

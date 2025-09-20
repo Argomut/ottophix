@@ -33,9 +33,7 @@ class Task {
           ? DateTime.parse(json['finish_time'])
           : null,
       totalUsedTime: json['total_used_time'],
-      assignedParts: json['assigned_parts'] != null 
-          ? List<Map<String, dynamic>>.from(json['assigned_parts'])
-          : null,
+      assignedParts: null, // assigned_parts column doesn't exist in database
     );
   }
 
@@ -47,7 +45,8 @@ class Task {
       'creation_time': creationTime?.toIso8601String(),
       'finish_time': finishTime?.toIso8601String(),
       'total_used_time': totalUsedTime,
-      'assigned_parts': assignedParts,
+      // Note: assigned_parts column doesn't exist in the database schema
+      // We'll handle parts separately through the cart/checkout system
     };
   }
 }
