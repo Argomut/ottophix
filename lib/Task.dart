@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'models/item.dart';
 
 class Task {
   String id;
@@ -7,7 +8,7 @@ class Task {
   DateTime? creationTime;
   String? totalUsedTime;
   DateTime? finishTime;
-
+  List<Map<String, dynamic>>? assignedParts; // Store parts as JSON data
 
   Task({
     required this.id,
@@ -16,6 +17,7 @@ class Task {
     this.creationTime,
     this.totalUsedTime,
     this.finishTime,
+    this.assignedParts,
   });
 
 
@@ -31,6 +33,9 @@ class Task {
           ? DateTime.parse(json['finish_time'])
           : null,
       totalUsedTime: json['total_used_time'],
+      assignedParts: json['assigned_parts'] != null 
+          ? List<Map<String, dynamic>>.from(json['assigned_parts'])
+          : null,
     );
   }
 
@@ -42,6 +47,7 @@ class Task {
       'creation_time': creationTime?.toIso8601String(),
       'finish_time': finishTime?.toIso8601String(),
       'total_used_time': totalUsedTime,
+      'assigned_parts': assignedParts,
     };
   }
 }

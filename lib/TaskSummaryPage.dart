@@ -1,11 +1,15 @@
 // TaskSummaryPage.dart
 import 'package:flutter/material.dart';
+import 'package:ottophix/main.dart';
+import 'package:ottophix/Task.dart';
 
-class TaskSummaryPage extends StatelessWidget {
+class TaskSummaryPage extends StatefulWidget {
   final String taskName;
   final String? description;
   final DateTime finishTime;
   final String totalUsedTime;
+  final DateTime creationTime;
+  final List<Map<String, dynamic>>? assignedParts;
 
   const TaskSummaryPage({
     super.key,
@@ -13,11 +17,68 @@ class TaskSummaryPage extends StatelessWidget {
     this.description,
     required this.finishTime,
     required this.totalUsedTime,
+    required this.creationTime,
+    this.assignedParts,
   });
+
+  @override
+  State<TaskSummaryPage> createState() => _TaskSummaryPageState();
+}
+
+class _TaskSummaryPageState extends State<TaskSummaryPage> {
 
   void _uploadEvidence() {
     // Logic to handle evidence upload (e.g., open image picker)
     print('Upload evidence button pressed');
+  }
+
+  Future<String> _getNextTaskId() async {
+    final count = await supabase
+        .from('tasks')
+        .count();
+
+    // Add 1 to the count to get the next number
+    final nextNumber = count + 1;
+    return 'T${nextNumber.toString().padLeft(3, '0')}';
+  }
+
+  Future<void> _onFinalComplete() async {
+    try {
+      final newTaskId = await _getNextTaskId();
+      
+      final newTask = Task(
+        id: newTaskId,
+        name: widget.taskName,
+        description: widget.description,
+        creationTime: widget.creationTime,
+        finishTime: widget.finishTime,
+        totalUsedTime: widget.totalUsedTime,
+        assignedParts: widget.assignedParts,
+      );
+
+      await supabase.from('tasks').insert(newTask.toSupabaseJson());
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Task completed successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate back to the home page
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving task: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
 
@@ -26,7 +87,7 @@ class TaskSummaryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(taskName),
+        title: Text(widget.taskName),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.menu),
@@ -58,7 +119,7 @@ class TaskSummaryPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8.0),
               ),
               child: Text(
-                description ?? 'No description provided.',
+                widget.description ?? 'No description provided.',
                 style: const TextStyle(fontSize: 16),
               ),
             ),
@@ -78,7 +139,7 @@ class TaskSummaryPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8.0),
               ),
               child: Text(
-                '${finishTime.day.toString().padLeft(2, '0')} - ${finishTime.month.toString().padLeft(2, '0')} - ${finishTime.year}  ${finishTime.hour.toString().padLeft(2, '0')}:${finishTime.minute.toString().padLeft(2, '0')}:${finishTime.second.toString().padLeft(2, '0')}',
+                '${widget.finishTime.day.toString().padLeft(2, '0')} - ${widget.finishTime.month.toString().padLeft(2, '0')} - ${widget.finishTime.year}  ${widget.finishTime.hour.toString().padLeft(2, '0')}:${widget.finishTime.minute.toString().padLeft(2, '0')}:${widget.finishTime.second.toString().padLeft(2, '0')}',
                 style: const TextStyle(fontSize: 16),
               ),
             ),
@@ -98,7 +159,7 @@ class TaskSummaryPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8.0),
               ),
               child: Text(
-                totalUsedTime,
+                widget.totalUsedTime,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -137,12 +198,7 @@ class TaskSummaryPage extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  // Navigate back to the home page or a success screen
-
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-
+                onPressed: _onFinalComplete,
                 icon: const Icon(Icons.check, color: Colors.white),
                 label: const Text('Complete', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(

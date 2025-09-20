@@ -78,7 +78,8 @@ class _TaskMainState extends State<TaskMain> {
         creationTime: DateTime.now(),
       );
 
-      final completionData = await Navigator.of(context).push(
+      // Navigate to TaskDetailPage - it will handle navigation to TaskSummaryPage
+      await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => TaskDetailPage(
             taskName: newTask.name,
@@ -87,22 +88,9 @@ class _TaskMainState extends State<TaskMain> {
         ),
       );
 
-      if (completionData != null && completionData is Map) {
-        newTask.finishTime = completionData['finishTime'];
-        newTask.totalUsedTime = completionData['totalUsedTime'];
-
-        try {
-          await supabase.from('tasks').insert(newTask.toSupabaseJson());
-          if (mounted) {
-            _fetchTasks();
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Error adding task: $e'),
-            ));
-          }
-        }
+      // Refresh the task list when returning from the task flow
+      if (mounted) {
+        _fetchTasks();
       }
     }
   }
