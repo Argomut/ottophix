@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:ottophix/Account.dart';
-import 'package:ottophix/Home.dart';
+import 'package:ottophix/AccountPage.dart';
+import 'package:ottophix/HistoryPage.dart';
+import 'package:ottophix/HomePage.dart';
 
-class Navigation extends StatefulWidget {
-  const Navigation({super.key});
+class NavigationPage extends StatefulWidget {
+  const NavigationPage({super.key});
 
   @override
-  State<Navigation> createState() => _NavigationState();
+  State<NavigationPage> createState() => _NavigationPageState();
 }
 
-class _NavigationState extends State<Navigation> {
+class _NavigationPageState extends State<NavigationPage> {
   int _currentPageIndex = 0;
 
   final List<Widget> _pages = [
-    Home(),
-    Center(child: Text('Search Page')),
-    Account(),
+    HomePage(),
+    HistoryPage(),
+    AccountPage(),
   ];
 
   @override
