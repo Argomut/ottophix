@@ -1,15 +1,10 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:ottophix/Account.dart';
 import 'package:ottophix/Car.dart';
 import 'package:ottophix/Service.dart';
 import 'package:ottophix/ServicePage.dart';
 import 'package:ottophix/main.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-
-import 'ServiceAssignment.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -60,7 +55,7 @@ class _HistoryPageState extends State<HistoryPage> {
             .order('service_id', ascending: true)
             .single();
 
-        tempServiceList.add(Service.fromJson(response)); // Only add to the list if data is available
+        tempServiceList.add(Service.fromJson(response));
       }
       catch (e) {}
     }

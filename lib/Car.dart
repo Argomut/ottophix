@@ -19,7 +19,6 @@ class Car {
     required this.customerId,
   });
 
-  // Factory method to create a Car from a Map (like JSON)
   factory Car.fromJson(Map<String, dynamic> map) {
     return Car(
       carId: map['car_id'],
@@ -33,7 +32,6 @@ class Car {
     );
   }
 
-  // Convert a Car object to a Map
   Map<String, dynamic> toJson() {
     return {
       'car_id': carId,
