@@ -3,11 +3,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'detailPage.dart';
 import 'cartPage.dart';
 import 'item.dart';
+import 'stockaPage.dart';
 
 class SearchPage extends StatefulWidget {
   final bool isFromTaskDetail;
-
-  const SearchPage({super.key, this.isFromTaskDetail = false});
+  final String? taskId;
+  
+  const SearchPage({super.key, this.isFromTaskDetail = false, this.taskId});
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -78,20 +80,29 @@ class _SearchPageState extends State<SearchPage> {
         title: const Text("Search Page"),
         backgroundColor: Colors.orange,
         automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.shopping_cart),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const CartPage()),
+                MaterialPageRoute(builder: (context) => CartPage(taskId: widget.taskId)),
               );
             },
           ),
           IconButton(
             icon: const Icon(Icons.inventory),
             onPressed: () {
-              Navigator.pushNamed(context, '/stock'); // 跳转 StockPage
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const StockPage()),
+              );
             },
           ),
         ],

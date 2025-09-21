@@ -1,3 +1,4 @@
+// TaskMain.dart
 
 import 'package:flutter/material.dart';
 import 'package:ottophix/main.dart';
@@ -10,8 +11,9 @@ import 'TaskInfoPage.dart';
 
 
 class TaskMain extends StatefulWidget {
-  const TaskMain({super.key, required this.title});
+  const TaskMain({super.key, required this.title, this.serviceId});
   final String title;
+  final int? serviceId; // Add serviceId parameter to filter tasks
 
   @override
   State<TaskMain> createState() => _TaskMainState();
@@ -29,54 +31,139 @@ class _TaskMainState extends State<TaskMain> {
     _fetchTasks();
   }
 
-  Future<void> _fetchTasks() async {
-    setState(() => _isLoading = true);
+  Future<void> _fetchTasks({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() => _isLoading = true);
+    }
     try {
-      final data = await supabase
-          .from('tasks')
-          .select()
-          .eq("service_ID", widget.service.service_ID)
-          .order('creation_time', ascending: false);
+      final data = widget.serviceId != null
+          ? await supabase
+              .from('tasks')
+              .select()
+              .eq('service_id', widget.serviceId!)
+              .order('creation_time', ascending: false)
+          : await supabase
+              .from('tasks')
+              .select()
+              .order('creation_time', ascending: false);
 
       _tasks = data.map<Task>((e) => Task.fromSupabaseJson(e)).toList();
-      setState(() => _isLoading = false);
+      
+      // Remove duplicate tasks based on ID
+      final Map<String, Task> uniqueTasks = {};
+      for (final task in _tasks) {
+        uniqueTasks[task.id] = task;
+      }
+      _tasks = uniqueTasks.values.toList();
+      if (showLoading) {
+        setState(() => _isLoading = false);
+      } else {
+        setState(() {}); // Just refresh the UI without showing loading
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Error fetching tasks: $e'),
         ));
       }
-      setState(() => _isLoading = false);
+      if (showLoading) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
 
   Future<String> _getNextTaskId() async {
-    final count = await supabase
-        .from('tasks')
-        .count();
+    try {
+      // Get the highest existing ID
+      final result = await supabase
+          .from('tasks')
+          .select('id')
+          .order('id', ascending: false)
+          .limit(1);
 
-    // Add 1 to the count to get the next number
-    final nextNumber = count + 1;
-    return 'T${nextNumber.toString().padLeft(3, '0')}';
+      // If there are no tasks yet, start with T001
+      if (result.isEmpty) {
+        return 'T001';
+      }
+
+      // Extract the highest ID
+      final highestId = result[0]['id'] as String;
+      final idNumber = int.parse(highestId.substring(1)); // Convert "T001" to 1
+      final nextIdNumber = idNumber + 1;
+
+      // Format the new ID back into the "T00X" format
+      return 'T${nextIdNumber.toString().padLeft(3, '0')}';
+    } catch (e) {
+      // Fallback to timestamp-based ID if there's an error
+      return 'T${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    }
   }
 
-  void _onAddTask() async {
-    final taskData = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const NewTaskForm(),
-      ),
-    );
+  void _onAddTask() {
+    // Use a post-frame callback to ensure navigation happens after current frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showNewTaskForm();
+      }
+    });
+  }
 
-    if (taskData != null && taskData is Map) {
+  Future<void> _showNewTaskForm() async {
+    if (!mounted) return;
+    
+    try {
+      final taskData = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const NewTaskForm(),
+        ),
+      );
+
+      print('Task data received: $taskData'); // Debug info
+
+      if (taskData != null && taskData is Map) {
       final newTaskId = await _getNextTaskId();
+      print('Generated task ID: $newTaskId'); // Debug info
 
       final newTask = Task(
         id: newTaskId,
         name: taskData['name'],
         description: taskData['description'],
         creationTime: DateTime.now(),
+        status: 'working', // Set default status to working
+        serviceId: widget.serviceId, // Include serviceId when creating task
       );
+
+      print('Task to be created: ${newTask.toSupabaseJson()}'); // Debug info
+
+      // Save the new task to database first (without new columns for now)
+      try {
+        // Create a simplified task data without the new columns
+        final taskData = {
+          'id': newTask.id,
+          'name': newTask.name,
+          'description': newTask.description,
+          'creation_time': newTask.creationTime?.toIso8601String(),
+          'finish_time': newTask.finishTime?.toIso8601String(),
+          'total_used_time': newTask.totalUsedTime,
+          'status': newTask.status,
+          'service_id': newTask.serviceId,
+        };
+        
+        await supabase.from('tasks').insert(taskData);
+        print('Task created successfully'); // Debug info
+      } catch (e) {
+        print('Error creating task: $e'); // Debug info
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error creating task: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return; // Exit if database insert fails
+      }
 
       // Navigate to TaskDetailPage - it will handle navigation to TaskSummaryPage
       await Navigator.of(context).push(
@@ -85,13 +172,25 @@ class _TaskMainState extends State<TaskMain> {
             taskName: newTask.name,
             creationTime: newTask.creationTime!,
             taskId: newTaskId, // Pass the taskId
+            accumulatedSeconds: 0, // New tasks start with 0 accumulated time
           ),
         ),
       );
 
-      // Refresh the task list when returning from the task flow
+        // Refresh the task list when returning from the task flow
+        if (mounted) {
+          _fetchTasks(showLoading: false);
+        }
+      }
+    } catch (e) {
+      print('Error in task creation: $e');
       if (mounted) {
-        _fetchTasks();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -108,15 +207,31 @@ class _TaskMainState extends State<TaskMain> {
 
       if (editedTask != null) {
         try {
+          // Only update the fields that were actually edited (name and description)
+          // Don't overwrite other important fields like creation_time, status, etc.
           await supabase
               .from('tasks')
-              .update(editedTask.toSupabaseJson())
+              .update({
+                'name': editedTask.name,
+                'description': editedTask.description,
+              })
               .eq('id', editedTask.id);
-          _fetchTasks();
+          _fetchTasks(showLoading: false);
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Task updated successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
         } catch (e) {
+          print('Error updating task: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text('Error updating task: $e'),
+              backgroundColor: Colors.red,
             ));
           }
         }
@@ -139,7 +254,7 @@ class _TaskMainState extends State<TaskMain> {
             .delete()
             .eq('id', _selectedTask!);
 
-        _fetchTasks();
+        _fetchTasks(showLoading: false);
         setState(() {
           _selectedTask = null;
         });
@@ -190,6 +305,62 @@ class _TaskMainState extends State<TaskMain> {
     }
   }
 
+  void _onResumePendingTask(Task task) async {
+    // Navigate to TaskDetailPage to resume the pending task
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => TaskDetailPage(
+          taskName: task.name,
+          creationTime: task.creationTime!,
+          taskId: task.id,
+          accumulatedSeconds: task.accumulatedSeconds,
+        ),
+      ),
+    );
+
+    // Refresh the task list when returning
+    if (mounted) {
+      _fetchTasks(showLoading: false);
+    }
+  }
+
+  // Helper method to get tasks by status
+  List<Task> _getTasksByStatus(String status) {
+    return _tasks.where((task) => task.status == status).toList();
+  }
+
+  // Helper method to get status color
+  Color _getStatusColor(String? status) {
+    switch (status) {
+      case 'working':
+        return Colors.blue;
+      case 'pending':
+        return Colors.orange;
+      case 'complete':
+        return Colors.green;
+      case 'fail':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // Helper method to get status icon
+  IconData _getStatusIcon(String? status) {
+    switch (status) {
+      case 'working':
+        return Icons.play_circle;
+      case 'pending':
+        return Icons.pause_circle;
+      case 'complete':
+        return Icons.check_circle;
+      case 'fail':
+        return Icons.cancel;
+      default:
+        return Icons.help;
+    }
+  }
+
   Widget _buildActionButton({
     required IconData icon,
     required String label,
@@ -231,6 +402,102 @@ class _TaskMainState extends State<TaskMain> {
     );
   }
 
+  Widget _buildStatusCard(String title, int count, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            count.toString(),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPendingTaskItem(Task task) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: Colors.orange[200]!),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (task.description != null && task.description!.isNotEmpty)
+                  Text(
+                    task.description!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                const SizedBox(height: 4),
+                Text(
+                  'Created: ${task.creationTime?.day.toString().padLeft(2, '0')}-${task.creationTime?.month.toString().padLeft(2, '0')}-${task.creationTime?.year}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: () => _onResumePendingTask(task),
+            icon: const Icon(Icons.play_arrow, size: 16),
+            label: const Text('Resume'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -243,7 +510,7 @@ class _TaskMainState extends State<TaskMain> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Job ID: ABC1234'),
+        title: Text(widget.serviceId != null ? 'Tasks for Service ${widget.serviceId}' : 'Tasks'),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.menu),
@@ -261,8 +528,13 @@ class _TaskMainState extends State<TaskMain> {
           ),
         ],
       ),
-      body: Column(
-        children: [
+      body: RefreshIndicator(
+        onRefresh: () => _fetchTasks(showLoading: false),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
           // Task Selection Section
           Container(
             margin: const EdgeInsets.all(16.0),
@@ -371,39 +643,121 @@ class _TaskMainState extends State<TaskMain> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+          ],
+
+          // Task Status Overview Section
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 1,
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Task Status Overview',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStatusCard('Working', _getTasksByStatus('working').length, Colors.blue, Icons.play_circle),
+                    _buildStatusCard('Pending', _getTasksByStatus('pending').length, Colors.orange, Icons.pause_circle),
+                    _buildStatusCard('Complete', _getTasksByStatus('complete').length, Colors.green, Icons.check_circle),
+                    _buildStatusCard('Failed', _getTasksByStatus('fail').length, Colors.red, Icons.cancel),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Pending Tasks Section
+          if (_getTasksByStatus('pending').isNotEmpty) ...[
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(12.0),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.pending_actions, color: Colors.orange[700]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Pending Tasks (${_getTasksByStatus('pending').length})',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...(_getTasksByStatus('pending').map((task) => _buildPendingTaskItem(task)).toList()),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
 
           // Empty state when no tasks
           if (_tasks.isEmpty && !_isLoading) ...[
-            const Spacer(),
+            const SizedBox(height: 100),
             const Icon(
               Icons.task_alt,
               size: 80,
               color: Colors.grey,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'No tasks yet',
-              style: TextStyle(
+            Text(
+              widget.serviceId != null ? 'No tasks for this service yet' : 'No tasks yet',
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Tap the + button to create your first task',
-              style: TextStyle(
+            Text(
+              widget.serviceId != null 
+                ? 'Tap the + button to create a task for this service'
+                : 'Tap the + button to create your first task',
+              style: const TextStyle(
                 fontSize: 14,
                 color: Colors.grey,
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 100),
           ],
 
-          // Spacer to push content up
-          if (_tasks.isNotEmpty) const Spacer(),
-        ],
+          // Add some bottom padding for mobile scrolling
+          const SizedBox(height: 100),
+          ],
+          ),
+        ),
       ),
 
       // Floating Action Button with Speed Dial
@@ -424,7 +778,7 @@ class _TaskMainState extends State<TaskMain> {
               child: const Icon(Icons.add, color: Colors.white),
             ),
             const SizedBox(height: 10),
-
+            
             // View Task Info FAB (only if task selected)
             if (_selectedTask != null) ...[
               FloatingActionButton(
@@ -439,7 +793,7 @@ class _TaskMainState extends State<TaskMain> {
               ),
               const SizedBox(height: 10),
             ],
-
+            
             // Edit Task FAB (only if task selected)
             if (_selectedTask != null) ...[
               FloatingActionButton(
@@ -454,7 +808,7 @@ class _TaskMainState extends State<TaskMain> {
               ),
               const SizedBox(height: 10),
             ],
-
+            
             // Delete Task FAB (only if task selected)
             if (_selectedTask != null) ...[
               FloatingActionButton(
@@ -470,7 +824,7 @@ class _TaskMainState extends State<TaskMain> {
               const SizedBox(height: 10),
             ],
           ],
-
+          
           // Main FAB
           FloatingActionButton(
             heroTag: "main_fab",

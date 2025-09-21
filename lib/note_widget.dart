@@ -291,15 +291,15 @@ class _NotesWidgetState extends State<NotesWidget> {
                       const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: _isLoading ? null : _saveNote,
-                        icon: _isLoading
+                        icon: _isLoading 
                             ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
                             : const Icon(Icons.save),
                         label: Text(_isLoading ? "Saving..." : "Save"),
                       ),

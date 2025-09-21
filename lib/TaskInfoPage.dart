@@ -30,8 +30,11 @@ class _TaskInfoPageState extends State<TaskInfoPage> {
   Future<void> _loadAssignedParts() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final taskPartsData = prefs.getStringList('task_parts_${widget.task.name}') ?? [];
-
+      // Use task.id as the key to match TaskDetailPage storage
+      final taskKey = 'task_parts_${widget.task.id}';
+      print('TaskInfoPage: Loading parts with key: $taskKey');
+      final taskPartsData = prefs.getStringList(taskKey) ?? [];
+      
       setState(() {
         assignedParts.clear();
         for (final itemJson in taskPartsData) {
@@ -50,6 +53,7 @@ class _TaskInfoPageState extends State<TaskInfoPage> {
           }
         }
       });
+      print('TaskInfoPage: Loaded ${assignedParts.length} parts for task: ${widget.task.id}');
     } catch (e) {
       print('Error loading assigned parts: $e');
     }
@@ -197,28 +201,28 @@ class _TaskInfoPageState extends State<TaskInfoPage> {
             child: ListTile(
               leading: partData['imagePath'] != null && partData['imagePath'].toString().isNotEmpty
                   ? ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  partData['imagePath'].toString(),
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        partData['imagePath'].toString(),
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 50,
+                            height: 50,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.image_not_supported),
+                          );
+                        },
+                      ),
+                    )
+                  : Container(
                       width: 50,
                       height: 50,
                       color: Colors.grey[300],
-                      child: const Icon(Icons.image_not_supported),
-                    );
-                  },
-                ),
-              )
-                  : Container(
-                width: 50,
-                height: 50,
-                color: Colors.grey[300],
-                child: const Icon(Icons.inventory_2),
-              ),
+                      child: const Icon(Icons.inventory_2),
+                    ),
               title: Text(
                 partData['name']?.toString() ?? 'Unknown Part',
                 style: const TextStyle(fontWeight: FontWeight.bold),

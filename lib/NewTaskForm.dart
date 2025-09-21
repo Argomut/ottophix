@@ -1,163 +1,149 @@
 import 'package:flutter/material.dart';
-import 'Task.dart';
-import 'searchPage.dart'; // Import searchPage.dart
-import 'item.dart'; // Import item.dart
-
-void main() {
-  runApp(MaterialApp(
-    home: NewTaskForm(title: 'New Task'), // Add the required 'title' parameter here
-  ));
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const NewTaskForm(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
 
 class NewTaskForm extends StatefulWidget {
-  const NewTaskForm({super.key, this.title}); // Remove 'required'
-  final String? title;
+  const NewTaskForm({super.key});
+
   @override
-  _NewTaskFormState createState() => _NewTaskFormState();
+  State<NewTaskForm> createState() => _NewTaskFormState();
 }
 
 class _NewTaskFormState extends State<NewTaskForm> {
-  // Controllers for the text fields to access their content.
-  final TextEditingController _taskNameController = TextEditingController();
-  final TextEditingController _taskDescriptionController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
 
-  void _createTask() {
-    final String taskName = _taskNameController.text;
-    final String taskDescription = _taskDescriptionController.text;
-
-    print('Task Name: $taskName');
-    print('Task Description: $taskDescription');
-
-    // Pop the page and pass the taskName back to the previous screen.
-    Navigator.of(context).pop({'name': taskName, 'description': taskDescription});
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 
-  // New function to handle the button press and navigate to SearchPage
-  void _addPart() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const SearchPage(isFromTaskDetail: true),
-      ),
-    );
+  void _submitForm() {
+    if (_formKey.currentState!.validate()) {
+      Navigator.of(context).pop({
+        'name': _nameController.text.trim(),
+        'description': _descriptionController.text.trim(),
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Job ID: ABC1234'),
+        title: const Text('Create New Task'),
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(Icons.menu),
-          onPressed: () {},
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.person),
-            onPressed: () {},
-          ),
-        ],
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Task Name Field
-            Text(
-              'Task Name',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            SizedBox(height: 8),
-            TextField(
-              controller: _taskNameController,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                  borderRadius: BorderRadius.circular(8.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Task Name',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  hintText: 'Enter task name',
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a task name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Task Description',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  hintText: 'Enter task description (optional)',
                 ),
               ),
-            ),
-            SizedBox(height: 24),
-
-            // Task Description Field
-            Text(
-              'Task Description',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            SizedBox(height: 8),
-            TextField(
-              controller: _taskDescriptionController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-            ),
-            SizedBox(height: 24),
-
-            // Required Parts Section
-            Text(
-              'Require Parts(Optional)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            SizedBox(height: 8),
-            GestureDetector(
-              onTap: _addPart, // Change this to call the new _addPart function
-              child: Container(
-                height: 50,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(color: Colors.black),
-                ),
-                child: Icon(Icons.add),
-              ),
-            ),
-            SizedBox(height: 50), // Spacing before the button
-
-            // Create Button
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                onPressed: _createTask,
-                icon: Icon(Icons.check, color: Colors.white),
-                label: Text('Create', style: TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFC9C0E2), // A purplish color
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16.0),
+              const SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton.icon(
+                  onPressed: _submitForm,
+                  icon: const Icon(Icons.check, color: Colors.white),
+                  label: const Text('Create Task', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFC9C0E2),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16.0),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class Item {
+  final int id;
+  final String name;
+  final double price;
+  final String? description;
+  final String? imagePath;
+
+  Item({
+    required this.id,
+    required this.name,
+    required this.price,
+    this.description,
+    this.imagePath,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'price': price,
+      'description': description,
+      'imagePath': imagePath,
+    };
+  }
+
+  factory Item.fromJson(Map<String, dynamic> json) {
+    return Item(
+      id: json['id'],
+      name: json['name'],
+      price: (json['price'] as num).toDouble(),
+      description: json['description'],
+      imagePath: json['imagePath'],
     );
   }
 }
