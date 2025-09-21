@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'SignUp.dart';
-import 'Login.dart';
-import 'Account.dart';
-import 'ForgotPassword.dart';
-import 'ResetPassword.dart';
-import 'Navigation.dart';
+import 'SignUpPage.dart';
+import 'LoginPage.dart';
+import 'AccountPage.dart';
+import 'ForgotPasswordPage.dart';
+import 'ResetPasswordPage.dart';
+import 'NavigationPage.dart';
 import 'searchPage.dart';
 import 'detailPage.dart';
 import 'cartPage.dart';
-import 'splash_page.dart';
+import 'SplashPage.dart';
 import 'models/item.dart';
 import 'package:app_links/app_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -92,10 +92,10 @@ class _MyAppState extends State<MyApp>{
         '/': (context) => const SplashPage(),
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
-        '/account': (context) => const Account(),
+        '/account': (context) => const AccountPage(),
         '/forgotpassword': (context) => const ForgotPasswordPage(),
         '/resetpassword': (context) => const ResetPasswordPage(),
-        '/navigation': (context) => const Navigation(),
+        '/navigation': (context) => const NavigationPage(),
         '/search': (context) => const SearchPage(),
         '/cart': (context) => const CartPage(),
       },
