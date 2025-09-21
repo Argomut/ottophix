@@ -35,6 +35,7 @@ class _TaskMainState extends State<TaskMain> {
       final data = await supabase
           .from('tasks')
           .select()
+          .eq("service_ID", widget.service.service_ID)
           .order('creation_time', ascending: false);
 
       _tasks = data.map<Task>((e) => Task.fromSupabaseJson(e)).toList();
