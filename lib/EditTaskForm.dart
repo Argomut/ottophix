@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'Task.dart';
+import 'note_widget.dart';
 
 class EditTaskForm extends StatefulWidget {
   final Task task;
@@ -37,11 +38,6 @@ class _EditTaskFormState extends State<EditTaskForm> {
     );
 
     Navigator.of(context).pop(editedTask);
-  }
-
-  void _onUploadEvidence() {
-    // Logic for uploading evidence
-    print('Upload evidence button pressed');
   }
 
   @override
@@ -101,26 +97,9 @@ class _EditTaskFormState extends State<EditTaskForm> {
             ),
             const SizedBox(height: 24),
 
-            // Evidence Section
-            const Text(
-              'Evidence',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: _onUploadEvidence,
-              child: Container(
-                height: 50,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(color: Colors.black),
-                ),
-                child: const Icon(Icons.add),
-              ),
-            ),
-            const SizedBox(height: 50),
+            // Evidence Section with NotesWidget
+            NotesWidget(jobId: widget.task.id),
+            const SizedBox(height: 24),
 
             // Save Button
             Align(

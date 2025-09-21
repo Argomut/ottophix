@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:ottophix/main.dart';
 import 'package:ottophix/Task.dart';
+import 'package:ottophix/note_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 class TaskSummaryPage extends StatefulWidget {
   final String taskName;
@@ -12,6 +12,7 @@ class TaskSummaryPage extends StatefulWidget {
   final String totalUsedTime;
   final DateTime creationTime;
   final List<Map<String, dynamic>>? assignedParts;
+  final String? taskId; // Add taskId parameter
 
   const TaskSummaryPage({
     super.key,
@@ -21,6 +22,7 @@ class TaskSummaryPage extends StatefulWidget {
     required this.totalUsedTime,
     required this.creationTime,
     this.assignedParts,
+    this.taskId, // Add taskId parameter
   });
 
   @override
@@ -28,11 +30,6 @@ class TaskSummaryPage extends StatefulWidget {
 }
 
 class _TaskSummaryPageState extends State<TaskSummaryPage> {
-
-  void _uploadEvidence() {
-    // Logic to handle evidence upload (e.g., open image picker)
-    print('Upload evidence button pressed');
-  }
 
   Future<String> _getNextTaskId() async {
     // Query for the highest existing ID in the 'tasks' table
@@ -186,31 +183,9 @@ class _TaskSummaryPageState extends State<TaskSummaryPage> {
             ),
             const SizedBox(height: 24),
 
-            // Evidence Button
-            GestureDetector(
-              onTap: _uploadEvidence,
-              child: Container(
-                height: 50,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(color: Colors.black),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Evidence',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.add, size: 24),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 48),
+            // Evidence Section with NotesWidget
+            NotesWidget(jobId: widget.taskId ?? 'TEMP_${DateTime.now().millisecondsSinceEpoch}'),
+            const SizedBox(height: 24),
 
             // Complete Button (Finalized)
             Align(

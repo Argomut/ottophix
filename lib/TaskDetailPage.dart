@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'TaskSummaryPage.dart';
 import 'searchPage.dart';
-import 'models/item.dart';
+import 'item.dart';
 import 'cartPage.dart';
 
 // Part model that works with Item
@@ -50,11 +50,13 @@ class Part {
 class TaskDetailPage extends StatefulWidget {
   final String taskName;
   final DateTime creationTime;
+  final String? taskId; // Add taskId parameter
 
   const TaskDetailPage({
     super.key,
     required this.taskName,
     required this.creationTime,
+    this.taskId, // Add taskId parameter
   });
 
   @override
@@ -179,6 +181,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           totalUsedTime: totalUsedTime,
           creationTime: widget.creationTime,
           assignedParts: partsJson,
+          taskId: widget.taskId, // Pass taskId
         ),
       ),
     );

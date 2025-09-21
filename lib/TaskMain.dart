@@ -84,6 +84,7 @@ class _TaskMainState extends State<TaskMain> {
           builder: (context) => TaskDetailPage(
             taskName: newTask.name,
             creationTime: newTask.creationTime!,
+            taskId: newTaskId, // Pass the taskId
           ),
         ),
       );

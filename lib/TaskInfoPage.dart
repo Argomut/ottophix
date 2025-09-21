@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'Task.dart';
-import 'models/item.dart';
+import 'item.dart';
+import 'package:ottophix/main.dart';
 
 class TaskInfoPage extends StatefulWidget {
   final Task task;
@@ -15,11 +16,14 @@ class TaskInfoPage extends StatefulWidget {
 
 class _TaskInfoPageState extends State<TaskInfoPage> {
   List<Map<String, dynamic>> assignedParts = [];
+  List<Map<String, dynamic>> _existingEvidence = []; // Store existing evidence entries
+  bool _isLoadingEvidence = false; // Loading state for fetching evidence
 
   @override
   void initState() {
     super.initState();
     _loadAssignedParts();
+    _loadExistingEvidence();
   }
 
   /// Load assigned parts from SharedPreferences
@@ -49,6 +53,129 @@ class _TaskInfoPageState extends State<TaskInfoPage> {
     } catch (e) {
       print('Error loading assigned parts: $e');
     }
+  }
+
+  /// Load existing evidence from database
+  Future<void> _loadExistingEvidence() async {
+    setState(() {
+      _isLoadingEvidence = true;
+    });
+
+    try {
+      final result = await supabase
+          .from('evidence')
+          .select()
+          .eq('task_id', widget.task.id)
+          .order('created_at', ascending: false);
+
+      setState(() {
+        _existingEvidence = List<Map<String, dynamic>>.from(result);
+        _isLoadingEvidence = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingEvidence = false;
+      });
+      print('Error loading evidence: $e');
+    }
+  }
+
+  Widget _buildEvidenceList() {
+    if (_isLoadingEvidence) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_existingEvidence.isEmpty) {
+      return const Text('No evidence uploaded.', style: TextStyle(fontSize: 16));
+    }
+
+    return Column(
+      children: _existingEvidence.map((evidence) => Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Evidence header with timestamp
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Evidence Entry',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    evidence['created_at'] != null
+                        ? '${DateTime.parse(evidence['created_at']).day}/${DateTime.parse(evidence['created_at']).month}/${DateTime.parse(evidence['created_at']).year} ${DateTime.parse(evidence['created_at']).hour}:${DateTime.parse(evidence['created_at']).minute.toString().padLeft(2, '0')}'
+                        : 'Unknown date',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Note text
+              if (evidence['note_text'] != null && evidence['note_text'].toString().isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Notes:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      evidence['note_text'],
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+
+              // Attached files
+              if (evidence['attached_files'] != null && evidence['attached_files'].isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Attached Files:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    ...(evidence['attached_files'] as List).map((filePath) => Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.attach_file, size: 14),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              filePath.toString().split('\\').last, // Get filename
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      )).toList(),
+    );
   }
 
   Widget _buildPartsList() {
@@ -139,6 +266,7 @@ class _TaskInfoPageState extends State<TaskInfoPage> {
             icon: const Icon(Icons.refresh),
             onPressed: () {
               _loadAssignedParts();
+              _loadExistingEvidence();
             },
           ),
         ],
@@ -177,7 +305,7 @@ class _TaskInfoPageState extends State<TaskInfoPage> {
             // Note: Add sections for Evidence and Assigned Parts here.
             Text('Evidence', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            const Text('No evidence uploaded.', style: TextStyle(fontSize: 16)), // Placeholder
+            _buildEvidenceList(),
             const SizedBox(height: 24),
 
             Text('Requested Parts', style: Theme.of(context).textTheme.titleLarge),

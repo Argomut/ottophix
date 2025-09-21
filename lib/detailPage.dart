@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'models/item.dart';
+import 'item.dart';
 import 'cartPage.dart';
 
 class DetailPage extends StatelessWidget {

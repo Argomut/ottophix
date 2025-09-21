@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'Task.dart';
 import 'searchPage.dart'; // Import searchPage.dart
-import 'models/item.dart'; // Import models/item.dart
+import 'item.dart'; // Import item.dart
 
 void main() {
   runApp(MaterialApp(

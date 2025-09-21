@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'detailPage.dart';
 import 'cartPage.dart';
-import 'models/item.dart';
+import 'item.dart';
 
 class SearchPage extends StatefulWidget {
   final bool isFromTaskDetail;

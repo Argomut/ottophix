@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'models/item.dart';
+import 'item.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CartPage extends StatefulWidget {
