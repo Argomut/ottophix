@@ -166,7 +166,7 @@ class _ServicePageState extends State<ServicePage> {
                   Text('Service ID: ${widget.service.serviceId}'),
                   Text('Service Type: ${widget.service.serviceType}'),
                   Text('Service Date: ${DateFormat('yyyy-MM-dd').format(widget.service.serviceDateTime)}'),
-                  Text('Service Cost: \$${widget.service.serviceCost}'),
+                  Text('Service Cost: RM${widget.service.serviceCost}'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
