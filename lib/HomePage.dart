@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:ottophix/Account.dart';
 import 'package:ottophix/Car.dart';
@@ -8,8 +6,6 @@ import 'package:ottophix/ServicePage.dart';
 import 'package:ottophix/main.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-
-import 'ServiceAssignment.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,6 +16,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool isLoading = false;
+  final String userId = supabase.auth.currentUser!.id;
+  String userType = "";
   final searchCtrl = TextEditingController();
 
   List<Service> services = [];
@@ -28,6 +26,7 @@ class _HomePageState extends State<HomePage> {
   List<Car> cars = [];
 
   final List<String> statuses = ['PENDING', 'IN_PROGRESS', 'ON_HOLD', 'REVIEWING'];
+  final List<String> customerStatuses = ['PENDING', 'IN_PROGRESS', 'ON_HOLD', 'REVIEWING', 'COMPLETED'];
   List<String> selectedStatuses = ['PENDING', 'IN_PROGRESS', 'ON_HOLD', 'REVIEWING'];
 
   @override
@@ -37,64 +36,109 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchData() async {
-    isLoading = true;
-    final serviceAssignment = await supabase
-        .from('serviceassignment')
-        .select().eq('mechanic_id', supabase.auth.currentUser!.id);
+    setState(() => isLoading = true);
 
-    List<int> serviceIds = (serviceAssignment as List)
-        .map((serviceAssignmentData) => serviceAssignmentData['service_id'] as int)
-        .toList();
+    // Identify user
+    final user = await supabase.from('account').select().eq('id', userId).single();
+    userType = user['account_type'];
 
     List<Service> tempServiceList = [];
+    List<Account> tempCustomers = [];
+    List<Car> tempCars = [];
 
-    for (var serviceId in serviceIds) {
-      try {
-        final response = await supabase
-            .from('service')
-            .select()
-            .ilike('service_type','%${searchCtrl.text}%')
-            .neq('service_status', 'COMPLETED')
-            .eq('service_id', serviceId)
-            .order('service_datetime', ascending: true)
-            .order('service_id', ascending: true)
-            .single();
+    // mechanic data
+    if (userType == 'MECHANIC') {
+      final serviceAssignment = await supabase
+          .from('serviceassignment')
+          .select()
+          .eq('mechanic_id', userId);
 
-          tempServiceList.add(Service.fromJson(response));
+      List<int> serviceIds = (serviceAssignment as List)
+          .map((data) => data['service_id'] as int)
+          .toList();
+
+      for (var serviceId in serviceIds) {
+        try {
+          final response = await supabase
+              .from('service')
+              .select()
+              .ilike('service_type', '%${searchCtrl.text}%')
+              .neq('service_status', 'COMPLETED')
+              .eq('service_id', serviceId)
+              .order('service_datetime', ascending: true)
+              .order('service_id', ascending: true)
+              .maybeSingle();
+
+          if (response != null) {
+            tempServiceList.add(Service.fromJson(response));
+          }
+        } catch (e) {}
       }
-      catch (e) {}
     }
 
-    for (var service in tempServiceList) {
+    // manager data
+    else if (userType == 'MANAGER') {
+      final response = await supabase
+          .from('service')
+          .select()
+          .ilike('service_type', '%${searchCtrl.text}%')
+          .neq('service_status', 'COMPLETED')
+          .eq('manager_id', userId)
+          .order('service_datetime', ascending: true)
+          .order('service_id', ascending: true);
+
+      for (var item in response) {
+        tempServiceList.add(Service.fromJson(item));
+      }
+    }
+
+    // customer data
+    else if (userType == 'CUSTOMER') {
       final carResponse = await supabase
           .from('cars')
           .select()
-          .eq('car_id', service.carId!)
-          .single();
+          .eq('customer_id', userId);
+
+      List<Car> customerCars = (carResponse as List).map((data) => Car.fromJson(data)).toList();
+
+      for (var car in customerCars) {
+        final response = await supabase
+            .from('service')
+            .select()
+            .ilike('service_type', '%${searchCtrl.text}%')
+            .neq('service_status', 'COMPLETED')
+            .eq('car_id', car.carId)
+            .order('service_datetime', ascending: true)
+            .order('service_id', ascending: true);
+
+        for (var item in response) {
+          tempServiceList.add(Service.fromJson(item));
+        }
+      }
+    }
+
+    // fetch car + customer for each service
+    for (var service in tempServiceList) {
+      final carResponse = await supabase.from('cars').select().eq('car_id', service.carId!).single();
       Car car = Car.fromJson(carResponse);
 
-      final customerResponse = await supabase
-          .from('account')
-          .select()
-          .eq('id', car.customerId)
-          .single();
+      final customerResponse = await supabase.from('account').select().eq('id', car.customerId).single();
       Account customer = Account.fromJson(customerResponse);
 
-
-      setState(() {
-        customers.add(customer);
-        cars.add(car);
-      });
+      tempCars.add(car);
+      tempCustomers.add(customer);
     }
 
     setState(() {
       services = tempServiceList;
       filteredServices = services;
+      cars = tempCars;
+      customers = tempCustomers;
+      isLoading = false;
     });
-    isLoading = false;
   }
 
-  void _updateStatus(int index, String serviceStatus) async{
+  void _updateStatus(int index, String serviceStatus) async {
     setState(() {
       services[index].serviceStatus = serviceStatus;
     });
@@ -109,21 +153,19 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Confirm Status Change'),
+          title: const Text('Confirm Status Change'),
           content: Text('Are you sure you want to change the status to "$serviceStatus"?'),
           actions: <Widget>[
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
                 _updateStatus(index, serviceStatus);
                 Navigator.of(context).pop();
               },
-              child: Text('Confirm'),
+              child: const Text('Confirm'),
             ),
           ],
         );
@@ -136,7 +178,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Filter Options"),
+          title: const Text("Filter Options"),
           content: StatefulBuilder(
             builder: (context, setState) {
               return Column(
@@ -161,13 +203,11 @@ class _HomePageState extends State<HomePage> {
           ),
           actions: <Widget>[
             TextButton(
-              child: Text("Cancel"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              child: const Text("Cancel"),
+              onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
-              child: Text("Apply"),
+              child: const Text("Apply"),
               onPressed: () {
                 _applyFilters();
                 Navigator.of(context).pop();
@@ -179,9 +219,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-// Method to apply the filter logic
   void _applyFilters() {
-    // Filter services based on selectedStatuses
     setState(() {
       filteredServices = services.where((service) {
         return selectedStatuses.contains(service.serviceStatus);
@@ -193,7 +231,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("SliverList Example"),
+        title: const Text("SliverList Example"),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         automaticallyImplyLeading: false,
       ),
@@ -214,9 +252,7 @@ class _HomePageState extends State<HomePage> {
                     Expanded(
                       child: TextField(
                         controller: searchCtrl,
-                        onSubmitted: (String searchkey){
-                          _fetchData();
-                        },
+                        onSubmitted: (_) => _fetchData(),
                         decoration: InputDecoration(
                           hintText: "Search...",
                           prefixIcon: GestureDetector(
@@ -235,9 +271,7 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(Icons.filter_list, color: Colors.black54),
-                      onPressed: () {
-                        _showFilterDialog(context);
-                      },
+                      onPressed: () => _showFilterDialog(context),
                     ),
                   ],
                 ),
@@ -245,78 +279,93 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           if (isLoading)
-            SliverFillRemaining(
+            const SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: Center(child: CircularProgressIndicator()),
             )
-          else if(!isLoading && services.isEmpty)
-            SliverFillRemaining(
+          else if (!isLoading && services.isEmpty)
+            const SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(
-                child: Text("No record of services"),
-              ),
+              child: Center(child: Text("No record of services")),
             )
           else
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-                  (BuildContext context, int index) {
-                final service = filteredServices[index];
-                final car = cars[index];
-                final customer = customers[index];
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                    (BuildContext context, int index) {
+                  final service = filteredServices[index];
+                  final car = cars[index];
+                  final customer = customers[index];
 
-                return ListTile(
-                  title: Text(service.serviceType),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(service.serviceDescription ?? 'No description'),
-                      Text(DateFormat('yyyy-MM-dd').format(service.serviceDateTime) ?? 'No description'),
-                    ],
-                  ),
-                  trailing: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.orange[100],
+                  return ListTile(
+                    title: Text(service.serviceType),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(service.serviceDescription ?? 'No description'),
+                        Text(service.serviceDateTime != null
+                            ? DateFormat('yyyy-MM-dd').format(service.serviceDateTime!)
+                            : 'No date'),
+                        if(userType == "CUSTOMER")
+                        Text('Service Status: ${service.serviceStatus}'),
+                      ],
                     ),
-                    child: DropdownButton<String>(
-                      dropdownColor: Colors.orange[100],
-                      value: service.serviceStatus,
-                      icon: Icon(Icons.arrow_drop_down),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          _showConfirmDialog(index, newValue);
-                        }
-                      },
-                      items: statuses.map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  leading: Text((index+1).toString()),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ServicePage(
-                          service: service,
-                          customer: customer,
-                          car: car,
+                    trailing:
+                      userType == 'CUSTOMER'
+                        ? ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange[100],
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: const BorderSide(color: Colors.grey),
+                              ),
+                            ),
+                            onPressed: () {
+                              _showConfirmDialog(index, "COMPLETED");
+                            },
+                            child: Text('COMPLETE?'),
+                        )
+                        : Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.orange[100],
+                            ),
+                            child: DropdownButton<String>(
+                              dropdownColor: Colors.orange[100],
+                              value: service.serviceStatus,
+                              icon: const Icon(Icons.arrow_drop_down),
+                              onChanged: (String? serviceStatus) {
+                                if (serviceStatus != null) {
+                                  _showConfirmDialog(index, serviceStatus);
+                                }
+                              },
+                              items: statuses.map<DropdownMenuItem<String>>((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                    leading: Text((index + 1).toString()),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ServicePage(
+                            service: service,
+                            customer: customer,
+                            car: car,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-              childCount: filteredServices.length,
+                      );
+                    },
+                  );
+                },
+                childCount: filteredServices.length,
+              ),
             ),
-          ),
         ],
       ),
     );

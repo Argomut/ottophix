@@ -24,7 +24,30 @@ class ServicePage extends StatefulWidget {
 
 class _ServicePageState extends State<ServicePage> {
   final List<String> statuses = ['PENDING', 'IN_PROGRESS', 'ON_HOLD', 'REVIEWING'];
+  String userType = '';
+  @override
+  void initState() {
+    identifyUserType();
+    super.initState();
+  }
 
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+  }
+
+  void identifyUserType() async{
+    // Identify user
+    final user = await supabase.from('account').select().eq('id', supabase.auth.currentUser!.id).single();
+    userType = user['account_type'];
+
+    setState(() {
+      userType = user['account_type'];
+    });
+
+    print(userType);
+  }
   void _updateStatus(String serviceStatus) async{
     setState(() {
       widget.service.serviceStatus = serviceStatus;
@@ -146,42 +169,64 @@ class _ServicePageState extends State<ServicePage> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('Service Status:'),
+                      if (widget.service.serviceStatus != 'COMPLETED' && userType == "CUSTOMER")
+                        Text('Service Status: (${widget.service.serviceStatus})')
+                      else
+                        const Text('Service Status:'),
                       const SizedBox(width: 10),
-                      if(widget.service.serviceStatus != 'COMPLETED')
+
+                      if (widget.service.serviceStatus != 'COMPLETED' && userType == "CUSTOMER")
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange[100],
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: const BorderSide(color: Colors.grey),
+                            ),
+                          ),
+                          onPressed: () {
+                            _showConfirmDialog("COMPLETED");
+                          },
+                          child: const Text('COMPLETE?'),
+                        )
+
+                      else if (widget.service.serviceStatus != 'COMPLETED')
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey),
                             borderRadius: BorderRadius.circular(8),
                             color: Colors.orange[100],
                           ),
-                          child: DropdownButton<String>(
-                            value: widget.service.serviceStatus,
-                            icon: const Icon(Icons.arrow_drop_down),
-                            dropdownColor: Colors.orange[100],
-                            onChanged: (String? newValue) {
-                              if (newValue != null) {
-                                _showConfirmDialog(newValue);
-                              }
-                            },
-                            items: statuses.map<DropdownMenuItem<String>>((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: widget.service.serviceStatus,
+                              icon: const Icon(Icons.arrow_drop_down),
+                              dropdownColor: Colors.orange[100],
+                              onChanged: (String? serviceStatus) {
+                                if (serviceStatus != null) {
+                                  _showConfirmDialog(serviceStatus);
+                                }
+                              },
+                              items: statuses.map<DropdownMenuItem<String>>((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                );
+                              }).toList(),
+                            ),
                           ),
                         )
+
                       else
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey),
                             borderRadius: BorderRadius.circular(8),
                             color: Colors.lightGreen,
                           ),
-                          child: Text(
+                          child: const Text(
                             'COMPLETED',
                             style: TextStyle(fontSize: 16),
                           ),
@@ -189,8 +234,8 @@ class _ServicePageState extends State<ServicePage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text('Service Description:'),
-                  Text('${widget.service.serviceDescription}'),
+                  const Text('Service Description:'),
+                  Text(widget.service.serviceDescription.toString()),
                 ],
               ),
             ),
