@@ -3,6 +3,7 @@ import 'package:ottophix/Service.dart';
 import 'package:ottophix/Account.dart';
 import 'package:ottophix/Car.dart';
 import 'package:intl/intl.dart';
+import 'TaskMain.dart';
 
 import 'main.dart';
 
@@ -236,6 +237,32 @@ class _ServicePageState extends State<ServicePage> {
                   const SizedBox(height: 8),
                   const Text('Service Description:'),
                   Text(widget.service.serviceDescription.toString()),
+                  const SizedBox(height: 16),
+                  // Task Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => TaskMain(
+                              title: 'Tasks for Service ${widget.service.serviceId}',
+                              serviceId: widget.service.serviceId,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.task_alt, color: Colors.white),
+                      label: const Text('View Tasks', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFC9C0E2),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.0),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

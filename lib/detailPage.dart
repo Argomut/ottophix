@@ -18,7 +18,7 @@ class DetailPage extends StatelessWidget {
       if (quantity == null || quantity <= 0) {
         return null;
       }
-
+      
       final prefs = await SharedPreferences.getInstance();
       final cartData = prefs.getStringList('cart') ?? [];
 
@@ -29,6 +29,7 @@ class DetailPage extends StatelessWidget {
 
       // save
       await prefs.setStringList('cart', cartData);
+      print('DetailPage: Added ${item.name} (x$quantity) to cart (isFromTaskDetail: $isFromTaskDetail)');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("${item.name} (x$quantity) added to cart")),
@@ -45,6 +46,7 @@ class DetailPage extends StatelessWidget {
 
       // save
       await prefs.setStringList('cart', cartData);
+      print('DetailPage: Added ${item.name} to cart (isFromTaskDetail: $isFromTaskDetail)');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("${item.name} added to cart")),
@@ -57,7 +59,7 @@ class DetailPage extends StatelessWidget {
   /// Show quantity selection dialog
   Future<int?> _showQuantityDialog(Item item, BuildContext context) async {
     int quantity = 1;
-
+    
     return await showDialog<int>(
       context: context,
       builder: (BuildContext context) {

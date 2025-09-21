@@ -9,6 +9,10 @@ class Task {
   String? totalUsedTime;
   DateTime? finishTime;
   List<Map<String, dynamic>>? assignedParts; // Store parts as JSON data
+  String? status; // Add status field
+  int? accumulatedSeconds; // Track accumulated time in seconds
+  DateTime? lastPauseTime; // Track when task was last paused
+  int? serviceId; // Add serviceId field to link tasks to services
 
   Task({
     required this.id,
@@ -18,6 +22,10 @@ class Task {
     this.totalUsedTime,
     this.finishTime,
     this.assignedParts,
+    this.status,
+    this.accumulatedSeconds,
+    this.lastPauseTime,
+    this.serviceId,
   });
 
 
@@ -34,6 +42,12 @@ class Task {
           : null,
       totalUsedTime: json['total_used_time'],
       assignedParts: null, // assigned_parts column doesn't exist in database
+      status: json['status'],
+      accumulatedSeconds: json['accumulated_seconds'] ?? 0,
+      lastPauseTime: json['last_pause_time'] != null
+          ? DateTime.parse(json['last_pause_time'])
+          : null,
+      serviceId: json['service_id'],
     );
   }
 
@@ -45,6 +59,10 @@ class Task {
       'creation_time': creationTime?.toIso8601String(),
       'finish_time': finishTime?.toIso8601String(),
       'total_used_time': totalUsedTime,
+      'status': status,
+      'accumulated_seconds': accumulatedSeconds,
+      'last_pause_time': lastPauseTime?.toIso8601String(),
+      'service_id': serviceId,
       // Note: assigned_parts column doesn't exist in the database schema
       // We'll handle parts separately through the cart/checkout system
     };

@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CartPage extends StatefulWidget {
   final String? taskId;
-
+  
   const CartPage({super.key, this.taskId});
 
   @override
@@ -30,6 +30,7 @@ class _CartPageState extends State<CartPage> {
     setState(() {
       items = cartData.map((e) => Item.fromJson(jsonDecode(e))).toList();
     });
+    print('CartPage: Loaded ${items.length} items from cart (taskId: ${widget.taskId})');
   }
 
   /// delete item from cart
@@ -52,14 +53,17 @@ class _CartPageState extends State<CartPage> {
   Future<void> _addItemsToTaskParts(List<String> cartData) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final taskPartsData = prefs.getStringList('task_parts_${widget.taskId}') ?? [];
-
+      // Use taskId if available, otherwise use a default key
+      final taskKey = widget.taskId ?? 'default_task';
+      final taskPartsData = prefs.getStringList('task_parts_$taskKey') ?? [];
+      
       // Add all cart items to task parts
       for (final itemJson in cartData) {
         taskPartsData.add(itemJson);
       }
-
-      await prefs.setStringList('task_parts_${widget.taskId}', taskPartsData);
+      
+      await prefs.setStringList('task_parts_$taskKey', taskPartsData);
+      print('Items added to task parts successfully for task: $taskKey');
     } catch (e) {
       print('Error adding items to task parts: $e');
     }
@@ -149,50 +153,53 @@ class _CartPageState extends State<CartPage> {
                 final prefs = await SharedPreferences.getInstance();
                 final cartData = prefs.getStringList('cart') ?? [];
 
-                if (cartData.isNotEmpty) {
-                  try {
-                    for (var itemJson in cartData) {
-                      final item = jsonDecode(itemJson);
+                 if (cartData.isNotEmpty) {
+                   try {
+                     for (var itemJson in cartData) {
+                       final item = jsonDecode(itemJson);
 
-                      // save checkout record
-                      await Supabase.instance.client
-                          .from('checkout')
-                          .insert({
-                        'item_name': item['name'],
-                        'price': item['price'],
-                      });
+                       // save checkout record
+                       await Supabase.instance.client
+                           .from('checkout')
+                           .insert({
+                         'item_name': item['name'],
+                         'price': item['price'],
+                       });
 
-                      // find stock_id and adjust stock
-                      try {
-                        final stockRes = await Supabase.instance.client
-                            .from('stock')
-                            .select('stock_id')
-                            .eq('item_id', item['id'])
-                            .single();
+                       // find stock_id and adjust stock
+                       try {
+                         final stockRes = await Supabase.instance.client
+                             .from('stock')
+                             .select('stock_id')
+                             .eq('item_id', item['id'])
+                             .single();
 
-                        final stockId = stockRes['stock_id'];
+                         final stockId = stockRes['stock_id'];
 
-                        // apply adjust_stock (-1, stock_id, 'checkout')
-                        await Supabase.instance.client.rpc(
-                          'adjust_stock',
-                          params: {
-                            'p_change': -1,
-                            'p_stock_id': stockId,
-                            'p_action': 'checkout',
-                          },
-                        );
-                      } catch (stockError) {
-                        print('Warning: Could not adjust stock for item ${item['name']}: $stockError');
-                        // Continue with checkout even if stock adjustment fails
-                      }
-                    }
+                         // apply adjust_stock (-1, stock_id, 'checkout')
+                         await Supabase.instance.client.rpc(
+                           'adjust_stock',
+                           params: {
+                             'p_change': -1,
+                             'p_stock_id': stockId,
+                             'p_action': 'checkout',
+                           },
+                         );
+                       } catch (stockError) {
+                         print('Warning: Could not adjust stock for item ${item['name']}: $stockError');
+                         // Continue with checkout even if stock adjustment fails
+                       }
+                     }
 
                     // empty cart
                     await prefs.remove('cart');
 
                     // If this is from a task, add items to task assigned parts
                     if (widget.taskId != null) {
+                      print('Adding ${cartData.length} items to task parts for taskId: ${widget.taskId}');
                       await _addItemsToTaskParts(cartData);
+                    } else {
+                      print('Cart accessed from SearchPage - general checkout completed');
                     }
 
                     ScaffoldMessenger.of(context).showSnackBar(
