@@ -30,7 +30,10 @@ class _TaskInfoPageState extends State<TaskInfoPage> {
   Future<void> _loadAssignedParts() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final taskPartsData = prefs.getStringList('task_parts_${widget.task.name}') ?? [];
+      // Use task.id as the key to match TaskDetailPage storage
+      final taskKey = 'task_parts_${widget.task.id}';
+      print('TaskInfoPage: Loading parts with key: $taskKey');
+      final taskPartsData = prefs.getStringList(taskKey) ?? [];
       
       setState(() {
         assignedParts.clear();
@@ -50,6 +53,7 @@ class _TaskInfoPageState extends State<TaskInfoPage> {
           }
         }
       });
+      print('TaskInfoPage: Loaded ${assignedParts.length} parts for task: ${widget.task.id}');
     } catch (e) {
       print('Error loading assigned parts: $e');
     }

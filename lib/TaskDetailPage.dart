@@ -8,6 +8,7 @@ import 'TaskSummaryPage.dart';
 import 'searchPage.dart';
 import 'item.dart';
 import 'cartPage.dart';
+import 'main.dart';
 
 // Part model that works with Item
 class Part {
@@ -51,12 +52,14 @@ class TaskDetailPage extends StatefulWidget {
   final String taskName;
   final DateTime creationTime;
   final String? taskId; // Add taskId parameter
+  final int? accumulatedSeconds; // Add accumulated seconds parameter
 
   const TaskDetailPage({
     super.key,
     required this.taskName,
     required this.creationTime,
     this.taskId, // Add taskId parameter
+    this.accumulatedSeconds, // Add accumulated seconds parameter
   });
 
   @override
@@ -78,8 +81,24 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
   @override
   void initState() {
     super.initState();
+    // Initialize timer with accumulated seconds if resuming a pending task
+    _seconds = widget.accumulatedSeconds ?? 0;
+    // Clear any existing data and initialize fresh
+    _assignedParts.clear();
+    _noteController.clear();
     _startTimer();
-    _loadTaskParts();
+    
+    // Only load existing parts data for resumed tasks (those with accumulated seconds > 0)
+    if (widget.accumulatedSeconds != null && widget.accumulatedSeconds! > 0) {
+      print('Resumed task detected (accumulated: ${widget.accumulatedSeconds}s), loading existing parts...');
+      _loadTaskParts();
+    } else {
+      // For new tasks, ensure parts list is empty
+      print('New task detected, starting with empty parts list');
+      setState(() {
+        _assignedParts.clear();
+      });
+    }
   }
 
   @override
@@ -103,9 +122,12 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
   Future<void> _loadTaskParts() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final taskPartsData = prefs.getStringList('task_parts_${widget.taskName}') ?? [];
+      // Use taskId if available, otherwise fall back to taskName for backward compatibility
+      final taskKey = widget.taskId ?? widget.taskName;
+      final taskPartsData = prefs.getStringList('task_parts_$taskKey') ?? [];
       
       setState(() {
+        // Ensure the list is completely clear before loading new data
         _assignedParts.clear();
         for (final itemJson in taskPartsData) {
           final item = Item.fromJson(jsonDecode(itemJson));
@@ -118,8 +140,103 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           }
         }
       });
+      print('Loaded ${_assignedParts.length} parts for task: $taskKey');
     } catch (e) {
       print('Error loading task parts: $e');
+      // Ensure list is clear even if there's an error
+      setState(() {
+        _assignedParts.clear();
+      });
+    }
+  }
+
+  /// Clear task parts data for a specific task
+  Future<void> _clearTaskParts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final taskKey = widget.taskId ?? widget.taskName;
+      await prefs.remove('task_parts_$taskKey');
+      setState(() {
+        _assignedParts.clear();
+      });
+    } catch (e) {
+      print('Error clearing task parts: $e');
+    }
+  }
+
+  /// Delete a specific part from the assigned parts list
+  Future<void> _deletePart(Part part) async {
+    try {
+      // Show confirmation dialog
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Part'),
+          content: Text('Are you sure you want to delete "${part.name}" from assigned parts?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        // Remove the part from the list
+        setState(() {
+          _assignedParts.remove(part);
+        });
+
+        // Save the updated parts list to SharedPreferences
+        await _saveTaskParts();
+
+        // Show confirmation message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${part.name} removed from assigned parts'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error deleting part: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting part: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Save current assigned parts to SharedPreferences
+  Future<void> _saveTaskParts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final taskKey = widget.taskId ?? widget.taskName;
+      
+      // Convert parts to JSON strings
+      final partsData = _assignedParts.map((part) => jsonEncode({
+        'name': part.name,
+        'quantity': part.quantity,
+        'itemId': part.itemId,
+        'price': part.price,
+        'imagePath': part.imagePath,
+      })).toList();
+      
+      await prefs.setStringList('task_parts_$taskKey', partsData);
+      print('Saved ${_assignedParts.length} parts for task: $taskKey');
+    } catch (e) {
+      print('Error saving task parts: $e');
     }
   }
 
@@ -141,7 +258,10 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     // Navigate to SearchPage to select parts
     final selectedItem = await Navigator.of(context).push<Item>(
       MaterialPageRoute(
-        builder: (context) => const SearchPage(isFromTaskDetail: true),
+        builder: (context) => SearchPage(
+          isFromTaskDetail: true,
+          taskId: widget.taskId,
+        ),
       ),
     );
 
@@ -171,7 +291,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       'imagePath': part.imagePath,
     }).toList();
 
-    // Navigate to TaskSummaryPage
+    // Navigate to TaskSummaryPage with complete status
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => TaskSummaryPage(
@@ -182,6 +302,83 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           creationTime: widget.creationTime,
           assignedParts: partsJson,
           taskId: widget.taskId, // Pass taskId
+          status: 'complete', // Pass complete status
+        ),
+      ),
+    );
+  }
+
+  void _onPending() async {
+    // Stop the timer
+    _timer.cancel();
+    
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mark as Pending'),
+        content: const Text('Are you sure you want to mark this task as pending? The timer will be stopped and you can continue later.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Update task status to pending in database if taskId exists
+      if (widget.taskId != null) {
+        try {
+          // For now, just update the status until database columns are added
+          await supabase
+              .from('tasks')
+              .update({'status': 'pending'})
+              .eq('id', widget.taskId!);
+        } catch (e) {
+          print('Error updating task status: $e');
+        }
+      }
+
+      // Navigate back to TaskMain
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } else {
+      // Restart timer if user cancelled
+      _startTimer();
+    }
+  }
+
+  void _onFail() {
+    final finishTime = DateTime.now();
+    final totalUsedTime = _formatTime(_seconds);
+    final taskDescription = _noteController.text;
+
+    // Convert parts to JSON format
+    final partsJson = _assignedParts.map((part) => {
+      'name': part.name,
+      'quantity': part.quantity,
+      'itemId': part.itemId,
+      'price': part.price,
+      'imagePath': part.imagePath,
+    }).toList();
+
+    // Navigate to TaskSummaryPage with fail status
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => TaskSummaryPage(
+          taskName: widget.taskName,
+          description: taskDescription,
+          finishTime: finishTime,
+          totalUsedTime: totalUsedTime,
+          creationTime: widget.creationTime,
+          assignedParts: partsJson,
+          taskId: widget.taskId, // Pass taskId
+          status: 'fail', // Pass fail status
         ),
       ),
     );
@@ -201,13 +398,16 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           IconButton(
             icon: const Icon(Icons.shopping_cart),
             onPressed: () async {
+              final taskId = widget.taskId ?? widget.taskName;
+              print('Opening cart with taskId: $taskId');
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => CartPage(taskId: widget.taskName),
+                  builder: (context) => CartPage(taskId: taskId),
                 ),
               );
               // Refresh assigned parts after returning from cart
+              print('Returning from cart, refreshing parts...');
               _loadTaskParts();
             },
           ),
@@ -286,7 +486,25 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             const SizedBox(height: 24),
 
             // Assigned Parts List
-            Text('Assigned Parts', style: Theme.of(context).textTheme.titleLarge),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Assigned Parts', style: Theme.of(context).textTheme.titleLarge),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () {
+                    _loadTaskParts();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Assigned parts refreshed'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  tooltip: 'Refresh assigned parts',
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
@@ -323,21 +541,52 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             ),
             const SizedBox(height: 48),
 
-            // Complete Button
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                onPressed: _onComplete,
-                icon: const Icon(Icons.check, color: Colors.white),
-                label: const Text('Complete', style: TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC9C0E2),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16.0),
+            // Action Buttons Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Pending Button
+                ElevatedButton.icon(
+                  onPressed: _onPending,
+                  icon: const Icon(Icons.pause, color: Colors.white),
+                  label: const Text('Pending', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16.0),
+                    ),
                   ),
                 ),
-              ),
+                
+                // Fail Button
+                ElevatedButton.icon(
+                  onPressed: _onFail,
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  label: const Text('Fail', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16.0),
+                    ),
+                  ),
+                ),
+                
+                // Complete Button
+                ElevatedButton.icon(
+                  onPressed: _onComplete,
+                  icon: const Icon(Icons.check, color: Colors.white),
+                  label: const Text('Complete', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFC9C0E2),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16.0),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -393,6 +642,12 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             Text(
               'RM ${((part.price ?? 0) * part.quantity).toStringAsFixed(2)}',
               style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => _deletePart(part),
+              tooltip: 'Delete part',
             ),
           ],
         ),

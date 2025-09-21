@@ -30,6 +30,7 @@ class _CartPageState extends State<CartPage> {
     setState(() {
       items = cartData.map((e) => Item.fromJson(jsonDecode(e))).toList();
     });
+    print('CartPage: Loaded ${items.length} items from cart (taskId: ${widget.taskId})');
   }
 
   /// delete item from cart
@@ -52,14 +53,17 @@ class _CartPageState extends State<CartPage> {
   Future<void> _addItemsToTaskParts(List<String> cartData) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final taskPartsData = prefs.getStringList('task_parts_${widget.taskId}') ?? [];
+      // Use taskId if available, otherwise use a default key
+      final taskKey = widget.taskId ?? 'default_task';
+      final taskPartsData = prefs.getStringList('task_parts_$taskKey') ?? [];
       
       // Add all cart items to task parts
       for (final itemJson in cartData) {
         taskPartsData.add(itemJson);
       }
       
-      await prefs.setStringList('task_parts_${widget.taskId}', taskPartsData);
+      await prefs.setStringList('task_parts_$taskKey', taskPartsData);
+      print('Items added to task parts successfully for task: $taskKey');
     } catch (e) {
       print('Error adding items to task parts: $e');
     }
@@ -192,7 +196,10 @@ class _CartPageState extends State<CartPage> {
 
                     // If this is from a task, add items to task assigned parts
                     if (widget.taskId != null) {
+                      print('Adding ${cartData.length} items to task parts for taskId: ${widget.taskId}');
                       await _addItemsToTaskParts(cartData);
+                    } else {
+                      print('Cart accessed from SearchPage - general checkout completed');
                     }
 
                     ScaffoldMessenger.of(context).showSnackBar(

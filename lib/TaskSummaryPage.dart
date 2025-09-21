@@ -13,6 +13,7 @@ class TaskSummaryPage extends StatefulWidget {
   final DateTime creationTime;
   final List<Map<String, dynamic>>? assignedParts;
   final String? taskId; // Add taskId parameter
+  final String? status; // Add status parameter
 
   const TaskSummaryPage({
     super.key,
@@ -23,6 +24,7 @@ class TaskSummaryPage extends StatefulWidget {
     required this.creationTime,
     this.assignedParts,
     this.taskId, // Add taskId parameter
+    this.status, // Add status parameter
   });
 
   @override
@@ -55,29 +57,56 @@ class _TaskSummaryPageState extends State<TaskSummaryPage> {
 
   Future<void> _onFinalComplete() async {
     try {
-      final newTaskId = await _getNextTaskId();
-      
-      final newTask = Task(
-        id: newTaskId,
-        name: widget.taskName,
-        description: widget.description,
-        creationTime: widget.creationTime,
-        finishTime: widget.finishTime,
-        totalUsedTime: widget.totalUsedTime,
-        assignedParts: null, // We'll handle parts separately
-      );
+      if (widget.taskId != null) {
+        // Update existing task
+        await supabase
+            .from('tasks')
+            .update({
+              'description': widget.description,
+              'finish_time': widget.finishTime.toIso8601String(),
+              'total_used_time': widget.totalUsedTime,
+              'status': widget.status ?? 'complete',
+            })
+            .eq('id', widget.taskId!);
+      } else {
+        // Create new task only if no taskId is provided
+        final newTaskId = await _getNextTaskId();
+        
+        final newTask = Task(
+          id: newTaskId,
+          name: widget.taskName,
+          description: widget.description,
+          creationTime: widget.creationTime,
+          finishTime: widget.finishTime,
+          totalUsedTime: widget.totalUsedTime,
+          assignedParts: null, // We'll handle parts separately
+          status: widget.status ?? 'complete', // Use provided status or default to complete
+        );
 
-      // Save the task to database
-      await supabase.from('tasks').insert(newTask.toSupabaseJson());
+        // Save the new task to database
+        await supabase.from('tasks').insert(newTask.toSupabaseJson());
+      }
       
       // Task parts are now handled through the cart system
       // No need to save them separately here
       
       if (mounted) {
+        String message = 'Task completed successfully!';
+        Color backgroundColor = Colors.green;
+        
+        // Customize message based on status
+        if (widget.status == 'fail') {
+          message = 'Task marked as failed!';
+          backgroundColor = Colors.red;
+        } else if (widget.status == 'complete') {
+          message = 'Task completed successfully!';
+          backgroundColor = Colors.green;
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Task completed successfully!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text(message),
+            backgroundColor: backgroundColor,
           ),
         );
         

@@ -78,7 +78,7 @@ class _MyAppState extends State<MyApp>{
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => const TaskMain(title: 'Task Management'),
+        '/': (context) => const TaskMain(title: 'Tasks'),
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
         '/account': (context) => const Account(),

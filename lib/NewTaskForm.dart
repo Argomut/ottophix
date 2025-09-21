@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'Task.dart';
-import 'searchPage.dart'; // Import searchPage.dart
-import 'item.dart'; // Import item.dart
 
 void main() {
   runApp(MaterialApp(
@@ -48,14 +46,6 @@ class _NewTaskFormState extends State<NewTaskForm> {
     Navigator.of(context).pop({'name': taskName, 'description': taskDescription});
   }
 
-  // New function to handle the button press and navigate to SearchPage
-  void _addPart() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const SearchPage(isFromTaskDetail: true),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,27 +104,6 @@ class _NewTaskFormState extends State<NewTaskForm> {
                   borderSide: BorderSide.none,
                   borderRadius: BorderRadius.circular(8.0),
                 ),
-              ),
-            ),
-            SizedBox(height: 24),
-
-            // Required Parts Section
-            Text(
-              'Require Parts(Optional)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            SizedBox(height: 8),
-            GestureDetector(
-              onTap: _addPart, // Change this to call the new _addPart function
-              child: Container(
-                height: 50,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(color: Colors.black),
-                ),
-                child: Icon(Icons.add),
               ),
             ),
             SizedBox(height: 50), // Spacing before the button
