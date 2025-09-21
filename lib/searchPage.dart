@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'detailPage.dart';
 import 'cartPage.dart';
-import 'models/item.dart';
+import 'item.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  final bool isFromTaskDetail;
+
+  const SearchPage({super.key, this.isFromTaskDetail = false});
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -86,6 +88,12 @@ class _SearchPageState extends State<SearchPage> {
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.inventory),
+            onPressed: () {
+              Navigator.pushNamed(context, '/stock'); // 跳转 StockPage
+            },
+          ),
         ],
       ),
       body: Column(
@@ -131,13 +139,27 @@ class _SearchPageState extends State<SearchPage> {
               itemBuilder: (context, index) {
                 final item = filteredProducts[index];
                 return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailPage(item: item),
-                      ),
-                    );
+                  onTap: () async {
+                    if (widget.isFromTaskDetail) {
+                      // If coming from TaskDetailPage, navigate to DetailPage and return the selected item
+                      final selectedItem = await Navigator.push<Item>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailPage(item: item, isFromTaskDetail: true),
+                        ),
+                      );
+                      if (selectedItem != null) {
+                        Navigator.of(context).pop(selectedItem);
+                      }
+                    } else {
+                      // Normal flow: navigate to DetailPage
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailPage(item: item),
+                        ),
+                      );
+                    }
                   },
                   child: Card(
                     shape: RoundedRectangleBorder(
@@ -147,7 +169,7 @@ class _SearchPageState extends State<SearchPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Expanded(child: buildImage(item.imagePath)),
+                        Expanded(child: buildImage(item.imagePath ?? '')),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Column(
