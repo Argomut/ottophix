@@ -252,10 +252,10 @@ class _ServicePageState extends State<ServicePage> {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.task_alt, color: Colors.white),
-                      label: const Text('View Tasks', style: TextStyle(color: Colors.white)),
+                      icon: const Icon(Icons.task_alt, color: Colors.black87),
+                      label: const Text('View Tasks', style: TextStyle(color: Colors.black87)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFC9C0E2),
+                        backgroundColor: Colors.orange[200],
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16.0),

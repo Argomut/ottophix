@@ -13,6 +13,7 @@ class AddServicePage extends StatefulWidget {
 }
 
 class _AddServicePageState extends State<AddServicePage> {
+  bool _isLoading = false;
   final TextEditingController _carIdCtrl = TextEditingController();
   final TextEditingController _serviceTypeCtrl = TextEditingController();
   final TextEditingController _serviceDescriptionCtrl = TextEditingController();
@@ -40,6 +41,7 @@ class _AddServicePageState extends State<AddServicePage> {
   }
 
   Future<void> _loadDraft() async {
+    _isLoading = true;
     final draft = await DatabaseService.getDraft();
     if (draft != null) {
       _carIdCtrl.text = draft['car_id'] ?? '';
@@ -50,9 +52,11 @@ class _AddServicePageState extends State<AddServicePage> {
         (draft['mechanic_ids'] as String?)?.split(',') ?? [],
       );
     }
+    _isLoading = false;
   }
 
   Future<void> _loadMechanics() async {
+    _isLoading = true;
     final response = await Supabase.instance.client
         .from('account')
         .select('id, username')
@@ -61,6 +65,7 @@ class _AddServicePageState extends State<AddServicePage> {
     setState(() {
       mechanics = List<Map<String, dynamic>>.from(response);
     });
+    _isLoading = false;
   }
 
   void _submitForm() async {
@@ -71,6 +76,7 @@ class _AddServicePageState extends State<AddServicePage> {
     final serviceDescription = _serviceDescriptionCtrl.text.trim();
     final serviceCost = double.tryParse(_serviceCostCtrl.text.trim());
 
+    _isLoading = true;
     try {
       final insertResponse = await Supabase.instance.client
           .from('service')
@@ -101,6 +107,7 @@ class _AddServicePageState extends State<AddServicePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Service created successfully.")),
       );
+      _isLoading = false;
       Navigator.pop(context);
 
     } catch (e) {
@@ -112,6 +119,7 @@ class _AddServicePageState extends State<AddServicePage> {
   }
 
   Future<bool> _saveDraft() async {
+    _isLoading = true;
     final draftData = {
       'car_id': _carIdCtrl.text.trim(),
       'service_type': _serviceTypeCtrl.text.trim(),
@@ -125,6 +133,7 @@ class _AddServicePageState extends State<AddServicePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Draft saved locally.")),
     );
+    _isLoading = false;
     return true;
   }
 
@@ -210,8 +219,10 @@ class _AddServicePageState extends State<AddServicePage> {
               const Text("Assign Mechanics:"),
               const SizedBox(height: 6),
 
-              if (mechanics.isEmpty)
+              if (_isLoading)
                 Center(child: CircularProgressIndicator())
+              else if (mechanics.isEmpty && !_isLoading)
+                Center(child: Text("No mechanics available"))
               else
                 ...mechanics.map((mech) {
                   final String id = mech['id'];

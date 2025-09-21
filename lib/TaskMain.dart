@@ -513,8 +513,10 @@ class _TaskMainState extends State<TaskMain> {
         title: Text(widget.serviceId != null ? 'Tasks for Service ${widget.serviceId}' : 'Tasks'),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {},
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
         ),
         actions: [
           IconButton(
