@@ -22,21 +22,19 @@ class Service {
     this.carId,
   });
 
-  // Method to map from JSON to Service object (for API or Database response)
   factory Service.fromJson(Map<String, dynamic> json) {
     return Service(
       serviceId: json['service_id'],
       serviceType: json['service_type'],
       serviceDescription: json['service_description'],
       serviceDateTime: DateTime.parse(json['service_datetime']),
-      serviceCost: json['service_cost'] != null ? json['service_cost'].toDouble() : null,
+      serviceCost: json['service_cost']?.toDouble(),
       serviceStatus: json['service_status'] ?? 'PENDING',
       managerId: json['manager_id'],
       carId: json['car_id'],
     );
   }
 
-  // Method to convert Service object to JSON (for API or Database insertion)
   Map<String, dynamic> toJson() {
     return {
       'service_id': serviceId,

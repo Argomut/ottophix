@@ -4,7 +4,6 @@ import 'package:ottophix/Car.dart';
 import 'package:ottophix/Service.dart';
 import 'package:ottophix/ServicePage.dart';
 import 'package:ottophix/main.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
@@ -331,21 +330,23 @@ class _HomePageState extends State<HomePage> {
                               borderRadius: BorderRadius.circular(8),
                               color: Colors.orange[100],
                             ),
-                            child: DropdownButton<String>(
-                              dropdownColor: Colors.orange[100],
-                              value: service.serviceStatus,
-                              icon: const Icon(Icons.arrow_drop_down),
-                              onChanged: (String? serviceStatus) {
-                                if (serviceStatus != null) {
-                                  _showConfirmDialog(index, serviceStatus);
-                                }
-                              },
-                              items: statuses.map<DropdownMenuItem<String>>((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                dropdownColor: Colors.orange[100],
+                                value: service.serviceStatus,
+                                icon: const Icon(Icons.arrow_drop_down),
+                                onChanged: (String? serviceStatus) {
+                                  if (serviceStatus != null) {
+                                    _showConfirmDialog(index, serviceStatus);
+                                  }
+                                },
+                                items: statuses.map<DropdownMenuItem<String>>((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                              ),
                             ),
                           ),
                     leading: Text((index + 1).toString()),
@@ -368,6 +369,14 @@ class _HomePageState extends State<HomePage> {
             ),
         ],
       ),
+      floatingActionButton: userType == "MANAGER"
+          ? FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).pushNamed("/addservice");
+        },
+        child: Icon(Icons.add),
+      )
+          : null,
     );
   }
 }

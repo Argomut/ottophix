@@ -127,6 +127,11 @@ class _AccountPageState extends State<AccountPage> {
                                 height: 32,
                                 child: Text("Email: $_userEmail", textAlign: TextAlign.left,),
                               ),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 32,
+                                child: Text("Account Created at: $_createdAt", textAlign: TextAlign.left,),
+                              ),
                               TextFormField(
                                 controller: _usernameCtrl,
                                 keyboardType: TextInputType.text,

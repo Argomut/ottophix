@@ -13,7 +13,6 @@ class ServiceAssignment {
     required this.mechanicId,
   });
 
-  // Factory method to create an instance of ServiceAssignment from JSON
   factory ServiceAssignment.fromJson(Map<String, dynamic> json) {
     return ServiceAssignment(
       assignmentId: json['assignment_id'],
@@ -23,7 +22,6 @@ class ServiceAssignment {
     );
   }
 
-  // Method to convert ServiceAssignment to a JSON object
   Map<String, dynamic> toJson() {
     return {
       'assignment_id': assignmentId,
