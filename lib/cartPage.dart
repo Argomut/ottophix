@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'models/item.dart';
+import 'item.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CartPage extends StatefulWidget {
-  const CartPage({super.key});
+  final String? taskId;
+
+  const CartPage({super.key, this.taskId});
 
   @override
   State<CartPage> createState() => _CartPageState();
@@ -20,7 +22,7 @@ class _CartPageState extends State<CartPage> {
     loadCart();
   }
 
-  /// 从本地加载购物车
+  /// load local cart
   Future<void> loadCart() async {
     final prefs = await SharedPreferences.getInstance();
     final cartData = prefs.getStringList('cart') ?? [];
@@ -30,7 +32,7 @@ class _CartPageState extends State<CartPage> {
     });
   }
 
-  /// 从购物车删除商品
+  /// delete item from cart
   Future<void> removeItem(int index) async {
     final prefs = await SharedPreferences.getInstance();
     final cartData = prefs.getStringList('cart') ?? [];
@@ -38,12 +40,29 @@ class _CartPageState extends State<CartPage> {
     cartData.removeAt(index);
     await prefs.setStringList('cart', cartData);
 
-    loadCart(); // 重新加载
+    loadCart(); // reload
   }
 
-  /// 计算总价
+  /// calculate price
   double get totalPrice {
     return items.fold(0, (sum, item) => sum + item.price);
+  }
+
+  /// Add items to task assigned parts after checkout
+  Future<void> _addItemsToTaskParts(List<String> cartData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final taskPartsData = prefs.getStringList('task_parts_${widget.taskId}') ?? [];
+
+      // Add all cart items to task parts
+      for (final itemJson in cartData) {
+        taskPartsData.add(itemJson);
+      }
+
+      await prefs.setStringList('task_parts_${widget.taskId}', taskPartsData);
+    } catch (e) {
+      print('Error adding items to task parts: $e');
+    }
   }
 
   @override
@@ -71,13 +90,14 @@ class _CartPageState extends State<CartPage> {
                   margin: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 6),
                   child: ListTile(
-                    leading: item.imagePath.startsWith('http')
-                        ? Image.network(item.imagePath,
+                    leading: (item.imagePath ?? '').startsWith('http')
+                        ? Image.network(item.imagePath ?? '',
                         width: 50, height: 50, fit: BoxFit.cover)
-                        : Image.asset(item.imagePath,
+                        : Image.asset(item.imagePath ?? '',
                         width: 50, height: 50, fit: BoxFit.cover),
                     title: Text(item.name),
-                    subtitle: Text("RM ${item.price.toStringAsFixed(2)}"),
+                    subtitle:
+                    Text("RM ${item.price.toStringAsFixed(2)}"),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () {
@@ -95,7 +115,7 @@ class _CartPageState extends State<CartPage> {
             ),
           ),
 
-          // 总价
+          // total price
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -115,7 +135,7 @@ class _CartPageState extends State<CartPage> {
             ),
           ),
 
-          // Checkout 按钮
+          // Checkout
           Padding(
             padding: const EdgeInsets.symmetric(
                 horizontal: 16.0, vertical: 10.0),
@@ -130,33 +150,61 @@ class _CartPageState extends State<CartPage> {
                 final cartData = prefs.getStringList('cart') ?? [];
 
                 if (cartData.isNotEmpty) {
-                  final itemsToInsert = cartData.map((e) {
-                    final item = jsonDecode(e);
-                    return {
-                      'item_name': item['name'],
-                      'price': item['price'],
-                      // 'user_id': Supabase.instance.client.auth.currentUser?.id, // 删除掉这行
-                    };
-                  }).toList();
-
                   try {
-                    await Supabase.instance.client
-                        .from('checkout')
-                        .insert(itemsToInsert);
+                    for (var itemJson in cartData) {
+                      final item = jsonDecode(itemJson);
 
-                    // 清空本地购物车
+                      // save checkout record
+                      await Supabase.instance.client
+                          .from('checkout')
+                          .insert({
+                        'item_name': item['name'],
+                        'price': item['price'],
+                      });
+
+                      // find stock_id and adjust stock
+                      try {
+                        final stockRes = await Supabase.instance.client
+                            .from('stock')
+                            .select('stock_id')
+                            .eq('item_id', item['id'])
+                            .single();
+
+                        final stockId = stockRes['stock_id'];
+
+                        // apply adjust_stock (-1, stock_id, 'checkout')
+                        await Supabase.instance.client.rpc(
+                          'adjust_stock',
+                          params: {
+                            'p_change': -1,
+                            'p_stock_id': stockId,
+                            'p_action': 'checkout',
+                          },
+                        );
+                      } catch (stockError) {
+                        print('Warning: Could not adjust stock for item ${item['name']}: $stockError');
+                        // Continue with checkout even if stock adjustment fails
+                      }
+                    }
+
+                    // empty cart
                     await prefs.remove('cart');
+
+                    // If this is from a task, add items to task assigned parts
+                    if (widget.taskId != null) {
+                      await _addItemsToTaskParts(cartData);
+                    }
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text("Checkout complete ✅")),
+                          content: Text("Checkout complete ")),
                     );
 
-                    // 刷新 UI
+                    // refresh UI
                     loadCart();
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Checkout failed ❌: $e")),
+                      SnackBar(content: Text("Checkout failed : $e")),
                     );
                   }
                 }
