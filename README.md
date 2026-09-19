@@ -235,31 +235,6 @@ flutter run
 - Structured the application using modular Flutter pages and reusable data models.
 - Utilized SQLite support for local data storage and persistence where required.
 
-## Screenshots
-
-### Login Screen
-
-![Login Screen](screenshots/login.png)
-
-### Dashboard
-
-![Dashboard](screenshots/dashboard.png)
-
-### Service Management
-
-![Service Management](screenshots/service-management.png)
-
-### Task Tracking
-
-![Task Tracking](screenshots/task-tracking.png)
-
-### Inventory Management
-
-![Inventory Management](screenshots/inventory-management.png)
-
-### Account Management
-
-![Account Management](screenshots/account-management.png)
 
 ## Author
 
